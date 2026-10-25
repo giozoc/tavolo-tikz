@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tavolo TikZ</title>
+<meta name="description" content="Editor visuale per TikZ e pgfplots: disegna, sposta e ruota gli elementi e il codice LaTeX si aggiorna da solo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Schibsted+Grotesk:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@1,9..144,600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script>window.MathJax={tex:{packages:{'[+]':[]}},svg:{fontCache:'none'},startup:{typeset:false,ready(){MathJax.startup.defaultReady();MathJax.startup.promise.then(()=>{window.__mjReady=true;window.__onMJ&&window.__onMJ()})}}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+</head>
+<body>
+<div id="app">
+<header id="top">
+  <div class="brand">Tavolo <b>TikZ</b></div>
+  <div class="grp" id="tools" role="toolbar" aria-label="Strumenti">
+    <button class="tb on" data-tool="select" title="Seleziona e sposta (V)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2l9 6-4 1 2.5 4.5-1.6.8L6.4 9.8 3 12.5z"/></svg><span class="lbl">Seleziona</span></button>
+    <button class="tb" data-tool="node" title="Nodo di testo (N)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="8" rx="1.5"/><path d="M5.5 7h5M8 7v3"/></svg><span class="lbl">Nodo</span></button>
+    <button class="tb" data-tool="line" title="Spezzata (L) — doppio clic o Invio per chiudere"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13l5-8 3 5 4-7"/></svg><span class="lbl">Linea</span></button>
+    <button class="tb" data-tool="arrow" title="Freccia (A)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14L13 3M8 3h5v5"/></svg></button>
+    <button class="tb" data-tool="rect" title="Rettangolo (R)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="11" height="9"/></svg></button>
+    <button class="tb" data-tool="circle" title="Cerchio (C)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/></svg></button>
+    <button class="tb" data-tool="ellipse" title="Ellisse (E)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="8" rx="6.5" ry="4"/></svg></button>
+    <button class="tb" data-tool="bezier" title="Curva di Bézier (B)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13C3 3 13 13 14 3"/></svg></button>
+    <button class="tb" data-tool="free" title="Mano libera (F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11c2-5 3 2 5-2s2-5 4-1 2 3 3 1"/></svg></button>
+    <button class="tb" data-tool="axis" title="Grafico pgfplots (G)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 2v11.5H14"/><path d="M4 12c3-1 4-8 9-9" stroke-dasharray="0"/></svg><span class="lbl">Axis</span></button>
+  </div>
+  <div class="grp">
+    <button class="tb" id="b-undo" title="Annulla (Ctrl+Z)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3L2 6l3 3M2 6h8a4 4 0 010 8H6"/></svg></button>
+    <button class="tb" id="b-redo" title="Ripeti (Ctrl+Shift+Z)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 3l3 3-3 3M14 6H6a4 4 0 000 8h4"/></svg></button>
+  </div>
+  <div class="grp">
+    <button class="tb on" id="b-snap" title="Aggancia alla griglia"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 5h14M1 11h14M5 1v14M11 1v14"/></svg><span class="lbl">Griglia</span></button>
+    <select class="tb" id="snapstep" title="Passo di aggancio" aria-label="Passo di aggancio"><option value="1">1 cm</option><option value="0.5">0,5 cm</option><option value="0.25" selected>0,25 cm</option><option value="0.1">1 mm</option></select>
+  </div>
+  <div class="sp"></div>
+  <select class="tb" id="figsel" title="Figura" aria-label="Figura" hidden></select>
+  <div class="grp">
+    <button class="tb" id="b-open" title="Apri file .tex o .tikz"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h4l1.5 1.5H14V13H2z"/></svg><span class="lbl">Apri</span></button>
+    <button class="tb" id="b-ex" title="Esempi"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h10v12H3zM6 5h4M6 8h4M6 11h2"/></svg><span class="lbl">Esempi</span></button>
+    <button class="tb" id="b-export" title="Esporta SVG, PNG, LaTeX"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 12v2h10v-2"/></svg><span class="lbl">Esporta</span></button>
+    <button class="tb" id="b-theme" title="Tema chiaro/scuro"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11A5.5 5.5 0 018 2.5z" fill="currentColor"/></svg></button>
+  </div>
+  <input type="file" id="file" accept=".tex,.tikz,.txt,.pgf" hidden>
+</header>
+<div id="main">
+  <section id="left" aria-label="Sorgente TikZ">
+    <div class="pane-h"><span>Sorgente</span><span class="sp"></span><span id="pos">r 1, c 1</span></div>
+    <div id="edwrap">
+      <div id="gut"></div>
+      <pre id="hl" aria-hidden="true"></pre>
+      <textarea id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Codice TikZ"></textarea>
+      <div id="ac" hidden></div>
+    </div>
+    <div id="msgs"></div>
+  </section>
+  <div id="split" aria-hidden="true"></div>
+  <section id="right" aria-label="Disegno">
+    <svg id="cv" class="t-sel" xmlns="http://www.w3.org/2000/svg">
+      <defs><pattern id="gridp" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M0 0H1V1" fill="none" stroke="var(--grid2)" stroke-width="0.012"/><path d="M0.5 0V1M0 .5H1" fill="none" stroke="var(--grid1)" stroke-width="0.008"/></pattern></defs>
+      <rect id="paper" fill="var(--paper)"/>
+      <rect id="gridr" fill="url(#gridp)"/>
+      <g id="axes0"><path id="ax0" stroke="#c7cedb" stroke-width="0.015" fill="none"/></g>
+      <g id="draw"></g>
+      <g id="over"></g>
+    </svg>
+    <div id="hint"></div>
+    <div id="status"><span id="st-xy">x 0, y 0</span><span id="st-msg" class="ok">pronto</span></div>
+    <div id="zoomctl" class="grp">
+      <button class="tb" id="b-zout" title="Riduci">−</button>
+      <button class="tb" id="b-fit" title="Adatta alla figura"><span id="zlab">100%</span></button>
+      <button class="tb" id="b-zin" title="Ingrandisci">+</button>
+    </div>
+    <aside id="props" hidden></aside>
+  </section>
+</div>
+</div>
+<div id="modal" hidden><div class="box"><h2><span id="m-t"></span><button class="btn" id="m-x">Chiudi</button></h2><div class="bd" id="m-b"></div></div></div>
+<div id="toast"></div>
+<div id="drop" hidden>Rilascia il file .tex per aprirlo</div>
+<script src="js/01-core.js"></script>
+<script src="js/02-style.js"></script>
+<script src="js/03-text.js"></script>
+<script src="js/04-nodes.js"></script>
+<script src="js/05-interpreter.js"></script>
+<script src="js/06-path.js"></script>
+<script src="js/07-path-nodes.js"></script>
+<script src="js/08-pgfplots.js"></script>
+<script src="js/09-render.js"></script>
+<script src="js/10-ui.js"></script>
+<script src="js/11-tools.js"></script>
+<script src="js/12-panel.js"></script>
+</body>
+</html>
