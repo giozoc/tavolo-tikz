@@ -175,4 +175,4 @@ Ispirato a [tikz-editor](https://github.com/DominikPeters/tikz-editor) di Domini
 
 ## Licenza
 
-Questo progetto è distribuito sotto licenza **MIT**.
+Questo progetto è distribuito sotto licenza **GNU GPL v3.0**.
