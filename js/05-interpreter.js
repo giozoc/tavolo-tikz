@@ -104,6 +104,9 @@ function run(a, b, ctx){
           run(j, en.s, c);
         } else if (/^(axis|semilogxaxis|semilogyaxis|loglogaxis|polaraxis)$/.test(env)){
           try { runAxis(i, env, g.e+1, en.s, en.e, lctx); } catch(err){ mkWarn(i,'e')('axis: '+(err.message||err)); console.error(err); }
+        } else if (/^(umlpackage|umlsystem|umlstate|umlcomponent|umlseqdiag|umlcall|umlcallself|umlfragment)$/.test(env)){
+          const fn = env==='umlseqdiag' ? umlSeqEnv : /^umlcall/.test(env) ? umlSeqCall : env==='umlfragment' ? umlSeqFrag : umlEnv;
+          if (!ctx.collectOnly) try { fn(i, env, g.e+1, en.s, en.e, lctx); } catch(err){ mkWarn(i,'e')(env+': '+(err.message||err)); console.error(err); }
         } else if (env==='groupplot'){ warn('groupplots non supportato'); }
         else warn('ambiente '+env+' ignorato');
         i=en.e; break; }
@@ -157,6 +160,7 @@ function run(a, b, ctx){
         if (body){ for (const v of expandList(g.text, ctx.vars)){ const vv=v; const orig=S; /* #1 sostituito testualmente */
           warn('\\pgfplotsinvokeforeach: #1 non sostituito'); break; } i=body.e+1; } else i=cmd.end; break; }
       default: {
+        if (/^(uml|tikzumlset$)/.test(name)){ i = umlCmd(i, name, cmd.end, b, lctx); break; }
         warn('comando \\'+name+' non supportato');
         const e=stmtEnd(cmd.end,b); const nl=S.indexOf('\n',cmd.end);
         i = (e>=0 && (nl<0 || e<nl+200)) ? e+1 : (nl<0?b:nl+1);

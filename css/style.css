@@ -57,6 +57,20 @@ select.tb{background:var(--panel2);border:1px solid var(--line);max-width:190px}
 .pane-h{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .pane-h .sp{flex:1}
 
+/* palette UML */
+#umlpal{width:200px;flex:none;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);min-height:0}
+#umlpal[hidden]{display:none}
+#umlpal .pmin{border:1px solid var(--line);background:var(--panel2);border-radius:5px;width:22px;height:22px;padding:0;line-height:1;font-size:14px}
+#umlpal-b{flex:1;overflow:auto;padding:4px 6px 12px}
+#umlpal summary{cursor:pointer;padding:8px 6px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);list-style-position:inside}
+.pal{display:flex;flex-direction:column;gap:1px}
+.pal button{display:flex;align-items:center;gap:8px;border:0;background:transparent;border-radius:6px;padding:4px 6px;font-size:12.5px;text-align:left;color:var(--ink)}
+.pal button:hover{background:var(--panel2)}
+.pal button.on{background:var(--accent);color:var(--accent-ink)}
+.pal svg{width:24px;height:16px;flex:none}
+.palhint{font-size:11.5px;color:var(--muted);line-height:1.4;margin:10px 6px 0}
+.palhint b{color:var(--ink)}
+
 /* editor */
 #edwrap{position:relative;flex:1;min-height:0;overflow:hidden}
 #hl,#ed{position:absolute;inset:0;margin:0;padding:12px 12px 40px 52px;font:13px/1.55 var(--f-code);white-space:pre;tab-size:2;overflow:auto;border:0;word-wrap:normal}
@@ -153,6 +167,7 @@ select.tb{background:var(--panel2);border:1px solid var(--line);max-width:190px}
   #left{width:auto!important;min-width:0;height:44vh;border-right:0;border-bottom:1px solid var(--line);order:2}
   #right{height:56vh;flex:none;order:1}
   #split{display:none}
+  #umlpal{width:auto;height:30vh;order:3;border-right:0;border-top:1px solid var(--line)}
   #props{width:auto;left:max(10px,env(safe-area-inset-left,0px));top:auto;bottom:48px;max-height:45%}
   .tb .lbl{display:none}
   .brand{font-size:16px}

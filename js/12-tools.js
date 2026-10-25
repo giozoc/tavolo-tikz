@@ -36,7 +36,7 @@ function drawOverlay(){
   out += ghost;
   overG.innerHTML = out;
 }
-const handleKey = h => h.h.kind==='abs' ? 'a'+h.h.x.s+','+h.h.y.s : h.h.kind==='polar' ? 'p'+h.h.a.s : 'r'+h.h.r.s;
+const handleKey = h => h.h.kind==='abs' ? 'a'+h.h.x.s+','+h.h.y.s : h.h.kind==='polar' ? 'p'+h.h.a.s : h.h.kind==='x' ? 'x'+h.h.x.s : 'r'+h.h.r.s;
 
 /* ---------- modifica del codice dalle maniglie ---------- */
 function precFor(h){
@@ -67,6 +67,9 @@ function handleEdits(h, page){
     if (a<0 && hh.a.val>=0) a+=360;
     ed.push({s:hh.a.s, e:hh.a.e, t:fmt(a,1)});
     ed.push({s:hh.r.s, e:hh.r.e, t:roundLocal(Math.hypot(loc[0],loc[1]), hh.r.unit, null, true)+hh.r.unit});
+  } else if (hh.kind==='x'){
+    const loc = hh.frame.inv(...page);
+    ed.push({s:hh.x.s, e:hh.x.e, t:roundLocal(loc[0], hh.x.unit, null, true)+hh.x.unit});
   } else if (hh.kind==='radius'){
     const loc = hh.frame.inv(...page); const r = Math.hypot(loc[0]-hh.center[0], loc[1]-hh.center[1]);
     ed.push({s:hh.r.s, e:hh.r.e, t:roundLocal(Math.max(r,.05*(UNIT[hh.r.unit||'cm']||1)), hh.r.unit, null, true)+hh.r.unit});
@@ -249,6 +252,7 @@ cv.addEventListener('pointerdown', e=>{
     selStart=null; selNode=null; selHandle=null; updateHL(); drawOverlay(); updateProps();
     startPan(e); return;
   }
+  if (tool==='uml'){ umlCanvasClick(page, hi); return; }
   const region = axisAt(page);
   const sp = region ? page : snapPage(page);
   if (tool==='node'){
@@ -421,6 +425,7 @@ function finishLine(cycle){
 function setTool(t){
   if (linePts && t!=='line') finishLine(false);
   tool=t; ghost=''; drawOverlay();
+  if (typeof umlPalSync==='function') umlPalSync();
   document.querySelectorAll('#tools [data-tool]').forEach(b=>b.classList.toggle('on', b.dataset.tool===t));
   cv.setAttribute('class', t==='select' ? 't-sel' : 't-draw');
   const tips = {node:'Clic per inserire un nodo', line:'Clic per aggiungere punti · doppio clic o Invio per finire · clic sul primo punto per chiudere', arrow:'Trascina tra due punti o due nodi', rect:'Trascina per disegnare un rettangolo', circle:'Trascina dal centro', ellipse:'Trascina il riquadro dell\'ellisse', bezier:'Trascina, poi regola i punti di controllo', free:'Disegna a mano libera', axis:'Trascina il riquadro del grafico'};
@@ -482,6 +487,7 @@ document.addEventListener('keydown', e=>{
     if (r.opt) setSource(setOpt(curStmt(), r.opt[0], r.opt[1])); else if (r.edits.length) setSource(applyEdits(src, r.edits));
     return;
   }
+  if (e.key.toLowerCase()==='u'){ umlPalOpen($('umlpal').hidden); return; }
   const map={v:'select',n:'node',l:'line',a:'arrow',r:'rect',c:'circle',e:'ellipse',b:'bezier',f:'free',g:'axis'};
   if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
   if (e.key==='0') fitView();

@@ -38,6 +38,8 @@ function updateProps(){
     const mk = items.includes('only marks') ? 'only' : String(optVal(items,'mark')||'');
     h += `<label for="ap-mark">marker</label>`+sel('ap-mark',[['','nessuno'],['*','● pieno'],['o','○ vuoto'],['square*','■ quadrato'],['triangle*','▲ triangolo'],['x','× croce'],['+','+ più'],['only','solo punti']], mk);
     h += `<label for="ap-smooth">smussata</label><input type="checkbox" id="ap-smooth"${items.includes('smooth')?' checked':''}>`;
+  } else if (st.uml){
+    h += umlPropsHTML(si, st, items, sel);
   } else {
     const isNode = cmd==='node' || cmd==='coordinate' || cmd==='matrix';
     if (isNode && st.text){
@@ -74,6 +76,7 @@ function wireProps(si, st, items){
   const cmd = st.cmd, isNode = cmd==='node'||cmd==='coordinate'||cmd==='matrix';
   box.querySelectorAll('[data-sw]').forEach(sw=>sw.addEventListener('click', e=>{
     const b=e.target.closest('button'); if(!b) return; const v=b.dataset.v; const kind=sw.dataset.sw;
+    if (st.uml && (kind==='fill'||kind==='draw')){ apply(setOptions(si,{remove:(it,k)=>k===kind, add:[kind+'='+v]})); return; }
     if (kind==='acol'){ apply(setOptions(si,{remove:(it,k)=>isBareColor(it)||k==='color', add:[v]})); return; }
     if (kind==='text'){ apply(setOptions(si,{remove:(it,k)=>k==='text', add:[`text=${v}`]})); return; }
     if (kind==='draw'){
@@ -99,6 +102,9 @@ function wireProps(si, st, items){
     if (v && /[,=\[\]]/.test(v) && !/^\{.*\}$/.test(v)) v='{'+v+'}';
     apply(setOpt(si, k, v||null));
   }));
+  box.querySelectorAll('[data-g]').forEach(t=>t.addEventListener('input', ()=>{ const g=st.groups[+t.dataset.g]; src=src.slice(0,g.s)+t.value+src.slice(g.e); ed.value=src; store.set('tz-src',src); renderNow(); }));
+  on('um-geom', v=>apply(setOpt(si,'geometry',v||null)));
+  on('um-type', v=>apply(setOpt(si,'type',v||null)));
   on('ax-grid', v=>apply(setOpt(si,'grid',v||null)));
   on('ax-lines', v=>apply(setOpt(si,'axis lines',v||null)));
   on('ax-leg', v=>apply(setOpt(si,'legend pos',v||null)));
@@ -144,9 +150,10 @@ function libsFor(code){
 }
 function standalone(){
   const code=figureCode(); const libs=libsFor(code);
-  const pre = figs.length ? src.slice(0, figs[0].s).split('\n').filter(l=>/^\s*\\(definecolor|colorlet|tikzset|pgfplotsset|usetikzlibrary|newcommand|def|tikzstyle)/.test(l)).join('\n') : '';
+  const pre = figs.length ? src.slice(0, figs[0].s).split('\n').filter(l=>/^\s*\\(definecolor|colorlet|tikzset|tikzumlset|pgfplotsset|usetikzlibrary|newcommand|def|tikzstyle)/.test(l)).join('\n') : '';
   const pgf = /\\begin\{(axis|semilogxaxis|semilogyaxis|loglogaxis)\}|\\addplot/.test(code);
-  return `\\documentclass[tikz,border=4pt]{standalone}\n`+(pgf?`\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n`+(/fill between/.test(code)?`\\usepgfplotslibrary{fillbetween}\n`:''):'')+(libs.length?`\\usetikzlibrary{${libs.join(',')}}\n`:'')+(pre?pre+'\n':'')+`\\begin{document}\n${code}\n\\end{document}\n`;
+  const uml = /\\uml[a-zA-Z]|\\begin\{uml|\\tikzumlset/.test(code+pre);
+  return `\\documentclass[tikz,border=4pt]{standalone}\n`+(uml?`\\usepackage{tikz-uml}\n`:'')+(pgf?`\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n`+(/fill between/.test(code)?`\\usepgfplotslibrary{fillbetween}\n`:''):'')+(libs.length?`\\usetikzlibrary{${libs.join(',')}}\n`:'')+(pre?pre+'\n':'')+`\\begin{document}\n${code}\n\\end{document}\n`;
 }
 function exportSVG(){
   const clone = drawG.cloneNode(true);
@@ -281,6 +288,78 @@ const EXAMPLES = {
   \draw[->] (m-1-2) -- node[right] {$h$} (m-2-2);
   \draw[->] (m-2-1) -- node[below] {$k$} (m-2-2);
 \end{tikzpicture}`,
+'Classi UML (tikz-uml)': String.raw`\begin{tikzpicture}
+  \begin{umlpackage}{zoo}
+    \umlabstract[x=0, y=0]{Animale}{
+      \# nome : String \\ \# eta : int
+    }{
+      + verso() : void \\ \umlstatic{+ conta() : int}
+    }
+    \umlclass[x=-2.5, y=-3.5]{Cane}{}{+ verso() : void}
+    \umlclass[x=2.5, y=-3.5]{Gatto}{- vite : int}{+ verso() : void}
+  \end{umlpackage}
+  \umlinterface[x=6.5, y=0]{Nutribile}{}{+ mangia(c : Cibo) : void}
+  \umlinherit[geometry=|-|]{Cane}{Animale}
+  \umlinherit[geometry=|-|]{Gatto}{Animale}
+  \umlimpl{Animale}{Nutribile}
+  \umlclass[x=6.5, y=-3.5]{Ciotola}{}{}
+  \umlaggreg[arg2=cibo, mult2=0..*, pos2=0.85]{Ciotola}{Nutribile}
+  \umlnote[x=10, y=-1, width=2.6cm]{Nutribile}{Ogni animale dello zoo deve poter mangiare.}
+\end{tikzpicture}`,
+'Casi d\'uso (tikz-uml)': String.raw`\begin{tikzpicture}
+  \umlactor[x=0, y=0]{Cliente}
+  \begin{umlsystem}{Negozio online}
+    \umlusecase[x=4, y=1.2, name=ord]{Ordina un prodotto}
+    \umlusecase[x=4, y=-1.2, name=pag]{Paga}
+    \umlusecase[x=9, y=-1.2, name=sconto]{Applica sconto}
+  \end{umlsystem}
+  \umlassoc{Cliente}{ord}
+  \umlassoc{Cliente}{pag}
+  \umlinclude{ord}{pag}
+  \umlextend{sconto}{ord}
+\end{tikzpicture}`,
+'Stati (tikz-uml)': String.raw`\begin{tikzpicture}
+  \umlstateinitial[x=0, y=0, name=ini]
+  \umlbasicstate[x=2.5, y=0, name=att]{Attesa}
+  \umlbasicstate[x=6, y=0, name=lav]{In lavorazione}
+  \umlstatefinal[x=6, y=-2.5, name=fin]
+  \umltrans{ini}{att}
+  \umltrans[arg=richiesta]{att}{lav}
+  \umltrans[arg=fine]{lav}{fin}
+  \umltrans[recursive=60|120|1.2cm, arg=timeout]{att}{att}
+\end{tikzpicture}`,
+'Sequenza (tikz-uml)': String.raw`\begin{tikzpicture}
+  \begin{umlseqdiag}
+    \umlactor[x=0, class=Utente]{u}
+    \umlobject[x=3.5, class=Server]{s}
+    \umldatabase[x=7, class=DB]{db}
+    \begin{umlcall}[op=login(), return=token]{u}{s}
+      \begin{umlcall}[op=cerca(id), return=dati]{s}{db}
+      \end{umlcall}
+      \begin{umlcallself}[op=verifica()]{s}
+      \end{umlcallself}
+    \end{umlcall}
+    \begin{umlfragment}[type=alt, label=token valido]
+      \begin{umlcall}[op=richiesta(), return=risposta]{u}{s}
+      \end{umlcall}
+      \umlfpart[altrimenti]
+      \begin{umlcall}[op=errore(), type=asynchron]{s}{u}
+      \end{umlcall}
+    \end{umlfragment}
+  \end{umlseqdiag}
+\end{tikzpicture}`,
+'Componenti (tikz-uml)': String.raw`\begin{tikzpicture}
+  \begin{umlcomponent}[x=0, y=0]{Applicazione}
+    \umlbasiccomponent[x=0, y=0]{Interfaccia utente}
+    \umlbasiccomponent[x=4.5, y=0]{Logica}
+  \end{umlcomponent}
+  \umlbasiccomponent[x=10, y=0]{Archivio}
+  \umlassemblyconnector[interface=Servizi]{Interfaccia utente}{Logica}
+  \umlprovidedinterface[interface=Dati, distance=1.2cm]{Archivio}
+  \umlrequiredinterface[interface=Configurazione, distance=1.2cm]{Applicazione}
+  \umlport{Logica}{east}
+  \umldelegateconnector{Logica-east-port}{Archivio}
+\end{tikzpicture}`,
 'Onde e \\foreach': String.raw`\begin{tikzpicture}
   \foreach \i in {0,...,5} {
     \draw[blue!\i0!red, thick] plot[smooth, domain=0:6.28, samples=50] (\x, {sin(deg(\x) + \i*30)*0.4 + \i*0.5});
@@ -317,6 +396,7 @@ function pointsHTML(si){
     if (hh.kind==='abs'){ a=hh.x; b=hh.y; }
     else if (hh.kind==='polar'){ a=hh.a; b=hh.r; }
     else if (hh.kind==='radius'){ a=null; b=hh.r; }
+    else if (hh.kind==='x'){ a=hh.x; b=null; }
     if (hh.proxy) lab='('+hh.pname+')';
     else if (hh.kind==='radius') lab='raggio';
     else if (h.role==='ctl') lab='c'+(++nc);
@@ -327,6 +407,41 @@ function pointsHTML(si){
   });
   if (!rows.length) return '';
   return `<div class="pts"><div class="ph">Coordinate · x, y</div>${rows.join('')}<div class="ptip">Trascina con <b>Alt</b> per ignorare la griglia. Clic su un punto, poi frecce per spostarlo (<b>Ctrl</b>+frecce: passo 0,01).</div></div>`;
+}
+
+/* ---------- elementi tikz-uml ---------- */
+function umlPropsHTML(si, st, items, sel){
+  const cmd=st.cmd; let h='';
+  (st.groups||[]).forEach((g,k)=>{ h += `<label class="full" for="um-g${k}">${esc(g.label)}</label><textarea id="um-g${k}" data-g="${k}">${esc(src.slice(g.s,g.e))}</textarea>`; });
+  const val = k => { const v=optVal(items,k); return v===null||v===true ? '' : String(v); };
+  const f = (k,l,ph='') => `<label for="um-${k.replace(/\s/g,'-')}">${l}</label><input type="text" id="um-${k.replace(/\s/g,'-')}" data-k="${k}" value="${esc(val(k))}" placeholder="${esc(ph)}">`;
+  if (st.uml==='rel'){
+    if (!/^uml(HV|VH)/.test(cmd)) h += `<label for="um-geom">geometria</label>`+sel('um-geom',[['','-- diretta'],['-|','-| orizzontale, poi verticale'],['|-','|- verticale, poi orizzontale'],['-|-','-|- a gradino orizzontale'],['|-|','|-| a gradino verticale']], val('geometry'));
+    if (/assemblyconnector$/.test(cmd)) return h + f('interface','interfaccia');
+    if (/trans$/.test(cmd)) return h + f('arg','etichetta');
+    h += f('arg1','etichetta 1')+f('mult1','molteplicità 1','es. 1..*')+f('arg2','etichetta 2')+f('mult2','molteplicità 2')+f('stereo','stereotipo');
+    return h;
+  }
+  if (st.uml==='call'){
+    h += `<label for="um-type">tipo</label>`+sel('um-type',[['','sincrona'],['asynchron','asincrona']], val('type'));
+    return h + f('op','operazione','es. calcola()') + f('return','ritorno') + f('dt','ritardo (ex)');
+  }
+  if (cmd==='umlfragment'){
+    h += `<label for="um-type">tipo</label>`+sel('um-type',[['','opt'],['alt','alt'],['loop','loop'],['par','par'],['break','break'],['critical','critical'],['neg','neg'],['ref','ref']], val('type'));
+    return h + f('label','condizione');
+  }
+  if (/interface$/.test(cmd)) return h + f('interface','interfaccia') + f('distance','distanza','1.5cm');
+  if (cmd==='umlclass') h += `<label for="um-type">tipo</label>`+sel('um-type',[['','classe'],['abstract','astratta'],['interface','interfaccia'],['typedef','typedef'],['enum','enumerazione']], val('type'));
+  if (/^uml(object|database|multi|entity|boundary|control|createcall)$/.test(cmd) || (cmd==='umlactor' && st.seq)) h += f('class','classe');
+  if (!/^uml(state(initial|final|join)|port|seqdiag|createcall)$/.test(cmd)){
+    h += `<label>riempimento</label>`+swatches('fill', val('fill'), false);
+    h += `<label>contorno</label>`+swatches('draw', val('draw'), false);
+    h += `<label>testo</label>`+swatches('text', val('text'), false);
+  }
+  if (st.uml==='el' && !stmtHandles(si).length && !/^uml(port|providedinterface|requiredinterface|createcall)$/.test(cmd)) h += f('x','x','0')+(st.seq?'':f('y','y','0'));
+  if (st.uml==='el' && !/^uml(actor|statefinal|stateinitial|statejoin)$/.test(cmd)) h += f('width','larghezza', /note/.test(cmd)?'3cm':'');
+  if (/^uml(class|abstract|interface|typedef|enum)$/.test(cmd)) h += f('template','template');
+  return h;
 }
 
 /* ---------- nodo dentro un percorso: testo, corpo, posizione ---------- */

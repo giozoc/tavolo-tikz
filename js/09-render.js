@@ -9,7 +9,7 @@ function findFigures(src){
   }
   return out;
 }
-const PRE_RE = /\\(tikzset|pgfplotsset|definecolor|colorlet|tikzstyle|newcommand|renewcommand|def|pgfmathsetmacro)\b/g;
+const PRE_RE = /\\(tikzset|tikzumlset|pgfplotsset|definecolor|colorlet|tikzstyle|newcommand|renewcommand|def|pgfmathsetmacro)\b/g;
 function renderFigure(src, fig){
   S = src; R = newRender(); DEFS=[]; DEFN=0; userColors={};
   const base = {frame:affineFrame(M_ID), style:newStyle(), styles:{}, vars:{}, warn:mkWarn(fig?fig.s:0), axis:null, axisDefaults:[], scope:{clip:null}, layer:null};

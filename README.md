@@ -55,6 +55,16 @@ Scrivere figure in TikZ significa di solito modificare un numero, ricompilare, g
 - scope e trasformazioni, alberi (`child`), `matrix of nodes`
 - sfumature, pattern, `\clip`, stili `/.style`, `\definecolor`, `\pgfmathsetmacro`
 
+**tikz-uml** (`\usepackage{tikz-uml}`)
+- classi: `\umlclass`, `\umlabstract`, `\umlinterface`, `\umltypedef`, `\umlenum`, `\umlsimpleclass`, con `template`, `\umlstatic`, `\umlvirt`
+- relazioni: `\umlassoc`, `\umluniassoc`, `\umlaggreg`, `\umlcompo`, `\umlinherit`, `\umlimpl`, `\umldep`, `\umlimport`, … con `geometry` (`--`, `-|`, `|-`, `-|-`, `|-|`), varianti `\umlHV…`/`\umlVH…`, `arg`/`mult`/`pos`, `stereo`, `anchor1`/`anchor2`, relazioni ricorsive
+- `\umlnote`, ambienti `umlpackage`, `umlsystem` e `umlstate` che si adattano al contenuto
+- casi d'uso (`\umlactor`, `\umlusecase`, `\umlinclude`, `\umlextend`) e stati (`\umlbasicstate`, `\umlstateinitial`, `\umlstatefinal`, `\umlstatedecision`, `\umltrans`)
+- diagrammi di sequenza: `umlseqdiag`, `\umlobject`, `\umlactor`, `\umldatabase`, `\umlentity`, `\umlboundary`, `\umlcontrol`, `\umlmulti`, chiamate `umlcall` e `umlcallself` (sincrone e asincrone, annidate), `\umlcreatecall`, frammenti `umlfragment` con `\umlfpart`
+- diagrammi di componenti: `\umlbasiccomponent`, ambiente `umlcomponent`, `\umlprovidedinterface`, `\umlrequiredinterface`, `\umlport`, `\umlassemblyconnector`, `\umldelegateconnector`
+- pulsante **UML** (tasto `U`): apre accanto al sorgente un pannello con tutti gli elementi; si inseriscono con un clic sul disegno (anche dentro un pacchetto, un sistema o un componente) e le relazioni con un clic sui due elementi da collegare
+- `\tikzumlset` per i colori predefiniti; le classi si spostano trascinandole (si riscrivono `x` e `y`) e il pannello modifica testi, colori e geometria
+
 **Modifica visuale**
 - strumenti: nodo, linea, freccia (si aggancia ai nodi), rettangolo, cerchio, ellisse, Bézier, mano libera, grafico
 - aggancio alla griglia regolabile; **Alt** per spostare liberamente
@@ -104,9 +114,11 @@ tavolo-tikz/
 │   ├── 07-path-nodes.js        # nodi nei percorsi, alberi, matrici
 │   ├── 08-pgfplots.js          # ambienti axis e \addplot
 │   ├── 09-render.js            # rendering di una figura
-│   ├── 10-ui.js                # editor del codice e vista
-│   ├── 11-tools.js             # strumenti, trascinamento, rotazione
-│   └── 12-panel.js             # pannello proprietà, esportazione, esempi
+│   ├── 10-uml.js               # comandi tikz-uml (classi, pacchetti, casi d'uso, stati)
+│   ├── 11-ui.js                # editor del codice e vista
+│   ├── 12-tools.js             # strumenti, trascinamento, rotazione
+│   ├── 13-panel.js             # pannello proprietà, esportazione, esempi
+│   └── 14-palette.js           # pannello degli elementi UML
 ├── esempi/                     # figure .tex compilabili con pdfLaTeX
 ├── docs/
 │   └── anteprima.png           # immagine del README
@@ -143,6 +155,8 @@ tavolo-tikz/
    pdflatex funzioni-pgfplots.tex
 ```
 
+   `uml-classi.tex`, `uml-sequenza.tex` e `uml-componenti.tex` richiedono `tikz-uml.sty` nella stessa cartella o nel proprio albero TeX.
+
 ---
 
 ## Scorciatoie
@@ -155,6 +169,7 @@ tavolo-tikz/
 | Canc | Elimina l'elemento selezionato |
 | Ctrl + D | Duplica |
 | Ctrl + Z / Ctrl + Maiusc + Z | Annulla / Ripeti |
+| `U` | Apre o chiude il pannello degli elementi UML |
 | `0` | Adatta la vista alla figura |
 | Spazio + trascina | Sposta la vista |
 | Alt + ↑/↓ nel codice | Aumenta o diminuisce il numero sotto il cursore |
@@ -164,6 +179,8 @@ tavolo-tikz/
 ## Limiti Noti
 
 Non sono ancora supportati l'operazione `let`, i grafici 3D (`\addplot3`), `groupplot`, le decorazioni e i dati letti da file esterni (`table {dati.csv}`): in questi casi l'editor mostra un avviso e prosegue con il resto della figura.
+
+Di tikz-uml l'aspetto è un'approssimazione di quello del pacchetto, quindi conviene sempre verificare con pdfLaTeX. Il pacchetto tikz-uml non fa parte di TeX Live né di MiKTeX: per compilare il codice esportato va scaricato `tikz-uml.sty` dal [sito dell'autore](https://perso.ensta-paris.fr/~kielbasi/tikzuml/).
 
 ---
 
