@@ -106,7 +106,7 @@ function buildNode(st, text, at, ctx, frameRot=0){
   n.r=r; n.tw=Math.max(r.w, st.textWidth); n.th=r.h+r.d; n.td=r.d;
   n.iw=n.tw/2+st.isep[0]; n.ih=n.th/2+st.isep[1];
   if (!t){ n.iw=st.isep[0]; n.ih=st.isep[1]; n.tw=n.th=n.td=0; }
-  n.osep = st.osep!==null ? st.osep : (st.draw ? st.lw/2 : 0);
+  n.osep = st.osep!==null ? st.osep : !st.draw ? 0 : st.double ? st.lw+(st.ddist||.6*PT)/2 : st.lw/2;
   nodeGeom(n);
   // ancoraggio
   let anc = st.anchor || 'center';
@@ -114,7 +114,7 @@ function buildNode(st, text, at, ctx, frameRot=0){
   if (st.place){
     const pl=PLACE[st.place.dir];
     if (st.place.of){
-      const ref = ctx.names[st.place.of.trim()];
+      const ref = R.names[st.place.of.trim()];
       if (!ref) ctx.warn('nodo «'+st.place.of+'» non trovato');
       else if (st.place.old){
         const d=st.nodeDist; p=V.add(ref.c||ref.p, [pl[0]*d, pl[1]*d]); anc='center';
@@ -123,9 +123,10 @@ function buildNode(st, text, at, ctx, frameRot=0){
         const dx = dist[0], dy = dist[1]===null||dist[1]===undefined ? dist[0] : dist[1];
         const diag = pl[0]&&pl[1];
         const refAnchor = {'above':'north','below':'south','left':'west','right':'east','above left':'north west','above right':'north east','below left':'south west','below right':'south east'}[st.place.dir];
-        const rp = ref.c ? nodeAnchor(ref, refAnchor) : ref.p;
+        // on grid: le distanze si misurano tra i centri
+        const rp = !ref.c ? ref.p : st.onGrid ? ref.c : nodeAnchor(ref, refAnchor);
         p = V.add(rp, diag ? [pl[0]*dx/Math.SQRT2*(st.place.dist&&st.place.dist[1]!=null?Math.SQRT2:1), pl[1]*dy/Math.SQRT2*(st.place.dist&&st.place.dist[1]!=null?Math.SQRT2:1)] : [pl[0]*dx, pl[1]*dy]);
-        anc = pl[2];
+        anc = st.onGrid ? 'center' : pl[2];
       }
     } else {
       anc = pl[2];
@@ -204,12 +205,17 @@ function nodeSVG(n, extra=''){
   const rot = n.rot ? ` transform="rotate(${fmt(-n.rot)} ${P(n.c).replace(' ',' ')})"` : '';
   const loc = p => V.add(n.c, p);
   if (n.kind!=='pt' && (pt.fill!=='none' || pt.stroke!=='none')){
-    let d;
+    let d, el;
     if (n.kind==='ell'){ const c=n.c; d=`M${fmt(c[0]+n.rx,4)} ${fmt(-c[1],4)}A${fmt(n.rx,4)} ${fmt(n.ry,4)} 0 1 0 ${fmt(c[0]-n.rx,4)} ${fmt(-c[1],4)}A${fmt(n.rx,4)} ${fmt(n.ry,4)} 0 1 0 ${fmt(c[0]+n.rx,4)} ${fmt(-c[1],4)}Z`; }
     else if (n.kind==='rrect'){ const r=n.hh; d=`M${P(loc([-n.hw+r,-n.hh]))}H${fmt(n.c[0]+n.hw-r,4)}A${r} ${r} 0 0 0 ${P(loc([n.hw-r,n.hh]))}H${fmt(n.c[0]-n.hw+r,4)}A${r} ${r} 0 0 0 ${P(loc([-n.hw+r,-n.hh]))}Z`; }
-    else if (st.rounded>0 && n.kind==='rect'){ const r=Math.min(st.rounded,n.hw,n.hh); const p=loc([-n.hw,n.hh]); d=''; out+=`<rect x="${fmt(n.c[0]-n.hw,4)}" y="${fmt(-n.c[1]-n.hh,4)}" width="${fmt(2*n.hw,4)}" height="${fmt(2*n.hh,4)}" rx="${fmt(r,4)}" fill="${pt.fill}" stroke="${pt.stroke}"${pt.a}${rot}/>`; }
+    else if (st.rounded>0 && n.kind==='rect'){ const r=Math.min(st.rounded,n.hw,n.hh); el=(f,s,a)=>`<rect x="${fmt(n.c[0]-n.hw,4)}" y="${fmt(-n.c[1]-n.hh,4)}" width="${fmt(2*n.hw,4)}" height="${fmt(2*n.hh,4)}" rx="${fmt(r,4)}" fill="${f}" stroke="${s}"${a}${rot}/>`; }
     else d = ptsPath(n.poly.map(loc));
-    if (d) out += `<path d="${d}" fill="${pt.fill}" stroke="${pt.stroke}"${pt.a}${rot}/>`;
+    if (!el) el=(f,s,a)=>`<path d="${d}" fill="${f}" stroke="${s}"${a}${rot}/>`;
+    if (st.double && pt.stroke!=='none'){
+      // bordo doppio (accepting): tratto largo e anima del colore di double
+      const dd=st.ddist||.6*PT;
+      out += el(pt.fill, pt.stroke, pt.a.replace(/stroke-width="[^"]*"/, `stroke-width="${fmt(2*st.lw+dd,5)}"`)) + el('none', css(st.double), ` stroke-width="${fmt(dd,5)}"`);
+    } else out += el(pt.fill, pt.stroke, pt.a);
     if (st.shape==='circle cross' || st.shape==='cross out'){ const a=n.kind==='ell'?n.rx*.707:n.hw, b=n.kind==='ell'?n.ry*.707:n.hh; out+=`<path d="M${P(loc([-a,-b]))}L${P(loc([a,b]))}M${P(loc([-a,b]))}L${P(loc([a,-b]))}" stroke="${pt.stroke==='none'?css(st.color):pt.stroke}" stroke-width="${fmt(st.lw,5)}"${rot}/>`; }
     if (st.shape==='circle split'){ out+=`<path d="M${P(loc([-n.rx,0]))}L${P(loc([n.rx,0]))}" stroke="${pt.stroke}" stroke-width="${fmt(st.lw,5)}"${rot}/>`; }
   }

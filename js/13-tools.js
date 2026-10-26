@@ -253,6 +253,7 @@ cv.addEventListener('pointerdown', e=>{
     startPan(e); return;
   }
   if (tool==='uml'){ umlCanvasClick(page, hi); return; }
+  if (tool==='automa'){ autCanvasClick(page, hi); return; }
   const region = axisAt(page);
   const sp = region ? page : snapPage(page);
   if (tool==='node'){
@@ -426,6 +427,7 @@ function setTool(t){
   if (linePts && t!=='line') finishLine(false);
   tool=t; ghost=''; drawOverlay();
   if (typeof umlPalSync==='function') umlPalSync();
+  if (typeof autPalSync==='function') autPalSync();
   document.querySelectorAll('#tools [data-tool]').forEach(b=>b.classList.toggle('on', b.dataset.tool===t));
   cv.setAttribute('class', t==='select' ? 't-sel' : 't-draw');
   const tips = {node:'Clic per inserire un nodo', line:'Clic per aggiungere punti · doppio clic o Invio per finire · clic sul primo punto per chiudere', arrow:'Trascina tra due punti o due nodi', rect:'Trascina per disegnare un rettangolo', circle:'Trascina dal centro', ellipse:'Trascina il riquadro dell\'ellisse', bezier:'Trascina, poi regola i punti di controllo', free:'Disegna a mano libera', axis:'Trascina il riquadro del grafico'};
@@ -488,6 +490,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   if (e.key.toLowerCase()==='u'){ umlPalOpen($('umlpal').hidden); return; }
+  if (e.key.toLowerCase()==='m'){ autPalOpen($('autpal').hidden); return; }
   const map={v:'select',n:'node',l:'line',a:'arrow',r:'rect',c:'circle',e:'ellipse',b:'bezier',f:'free',g:'axis'};
   if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
   if (e.key==='0') fitView();

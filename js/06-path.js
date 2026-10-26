@@ -11,6 +11,8 @@ function litSpan(txt, abs){
 function coordText(txt, abs, ctx, frame, ps){
   const t = txt.trim();
   const vars = ctx.vars;
+  // () vuota: il nodo corrente (edge [loop] ())
+  if (!t && ps) return ps.curNode ? {p:ps.curNode.c, node:ps.curNode} : {p:ps.cur||frame.map(0,0)};
   // calc
   if (t[0]==='$') return {p: calcExpr(t.replace(/^\$|\$$/g,''), ctx, frame, ps)};
   // sistemi di coordinate

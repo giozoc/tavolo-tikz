@@ -3,7 +3,7 @@ function nodeBaseStyle(pst, ctx, kw){
   const n = cloneStyle(pst);
   n.draw=undefined; n.fill=undefined; n.shade=null; n.pattern=null; n.arrows=['','']; n.dash=pst.dash; n.rounded=0;
   n.nodeRot=0; n.labels=[]; n.name=null; n.anchor=null; n.place=null; n.pos=null; n.shape = kw==='coordinate'?'coordinate':'rectangle';
-  n.sloped=false; n.auto=null; n.swap=false; n.matrix=false; n.mon=false; n.textWidth=0; n.minW=n.minH=0; n.isep=[3.333*PT,3.333*PT]; n.osep=null; n._rot=0;
+  n.sloped=false; n.auto=pst.auto; n.swap=pst.swap; n.matrix=false; n.mon=false; n.textWidth=0; n.minW=n.minH=0; n.isep=[3.333*PT,3.333*PT]; n.osep=null; n._rot=0;
   if (ctx.styles['every node']) applyOpts(n, ctx.styles['every node'], ctx);
   if (kw==='coordinate' && ctx.styles['every coordinate']) applyOpts(n, ctx.styles['every coordinate'], ctx);
   if (kw==='matrix'){ n.matrix=true; if (ctx.styles['every matrix']) applyOpts(n, ctx.styles['every matrix'], ctx); }
@@ -301,7 +301,7 @@ function finishPath(ps, ctx){
     let hb='';
     if (n.kind==='pt' && n.stmt>=0 && n.idx>=0){ const c=n.c, a=.09; hb=`<path class="cmark" d="M${fmt(c[0]-a,4)} ${fmt(-c[1],4)}H${fmt(c[0]+a,4)}M${fmt(c[0],4)} ${fmt(-c[1]-a,4)}V${fmt(-c[1]+a,4)}"/><circle class="hitf" fill="transparent" cx="${fmt(c[0],4)}" cy="${fmt(-c[1],4)}" r="${fmt(a*1.6,4)}"/>`; }
     if (n.kind!=='pt'){ const hw=Math.max(n.hw,.08), hh=Math.max(n.hh,.08); hb=`<rect class="hitf" fill="transparent" x="${fmt(n.c[0]-hw,4)}" y="${fmt(-n.c[1]-hh,4)}" width="${fmt(2*hw,4)}" height="${fmt(2*hh,4)}"${n.rot?` transform="rotate(${fmt(-n.rot)} ${fmt(n.c[0],4)} ${fmt(-n.c[1],4)})"`:''}/>`; }
-    body += `<g data-n="${n.idx}">${nodeSVG(n)}${hb}</g>`;
+    body += `<g data-n="${n.idx}">${nodeSVG(n)}${autSVG(n, ctx)}${hb}</g>`;
   }
   const clip = ctx.scope.clip && !ps.clip ? ` clip-path="url(#${ctx.scope.clip})"` : '';
   emit(ctx, `<g data-s="${ps.sIdx}"${clip}>${body}</g>`);

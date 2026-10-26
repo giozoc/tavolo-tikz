@@ -62,6 +62,7 @@ function applyKey(st, k, v, ctx, depth){
     if (PLACE[k]){ st.place={dir:k, dist:null, of:null}; return null; }
     if (isColorWord(k)){ st.color=parseColor(k); return null; }
   }
+  if (autKey(st, k, v, ctx, depth)) return null;
   const col = () => { const c=parseColor(v); if(c===null) ctx.warn('colore sconosciuto «'+v+'»'); return c; };
   switch(k){
     case 'draw': st.draw = v===null ? true : (col()||true); return null;

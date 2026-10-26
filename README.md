@@ -65,6 +65,12 @@ Scrivere figure in TikZ significa di solito modificare un numero, ricompilare, g
 - pulsante **UML** (tasto `U`): apre accanto al sorgente un pannello con tutti gli elementi; si inseriscono con un clic sul disegno (anche dentro un pacchetto, un sistema o un componente) e le relazioni con un clic sui due elementi da collegare
 - `\tikzumlset` per i colori predefiniti; le classi si spostano trascinandole (si riscrivono `x` e `y`) e il pannello modifica testi, colori e geometria
 
+**Automi** (`\usetikzlibrary{automata}`)
+- stati `state` (anche `state with output`), `initial` e `accepting` con le varianti `initial above`/`below`/`left`/`right`, `initial text`, `initial where`, `initial distance`, `accepting by double`, `accepting by arrow`, `accepting text`
+- stili `every state`, `every initial by arrow`, `every accepting by arrow`; posizionamento con `on grid` e `node distance`
+- transizioni con `edge`, `bend left`/`bend right`, cappi `loop above`/`below`/`left`/`right` verso `()`, etichette con `auto` e `swap`
+- pulsante **Automi** (tasto `M`): apre un pannello per inserire stati con un clic sul disegno, transizioni e transizioni curve con un clic sui due stati, cappi con un clic sullo stato; rende uno stato iniziale o accettante con un clic, e lo stesso si fa dalle caselle del pannello proprietà
+
 **Modifica visuale**
 - strumenti: nodo, linea, freccia (si aggancia ai nodi), rettangolo, cerchio, ellisse, Bézier, mano libera, grafico
 - aggancio alla griglia regolabile; **Alt** per spostare liberamente
@@ -115,10 +121,12 @@ tavolo-tikz/
 │   ├── 08-pgfplots.js          # ambienti axis e \addplot
 │   ├── 09-render.js            # rendering di una figura
 │   ├── 10-uml.js               # comandi tikz-uml (classi, pacchetti, casi d'uso, stati)
-│   ├── 11-ui.js                # editor del codice e vista
-│   ├── 12-tools.js             # strumenti, trascinamento, rotazione
-│   ├── 13-panel.js             # pannello proprietà, esportazione, esempi
-│   └── 14-palette.js           # pannello degli elementi UML
+│   ├── 11-automata.js          # libreria automata (stati iniziali e accettanti)
+│   ├── 12-ui.js                # editor del codice e vista
+│   ├── 13-tools.js             # strumenti, trascinamento, rotazione
+│   ├── 14-panel.js             # pannello proprietà, esportazione, esempi
+│   ├── 15-palette.js           # pannello degli elementi UML
+│   └── 16-automata-palette.js  # pannello degli automi
 ├── esempi/                     # figure .tex compilabili con pdfLaTeX
 ├── docs/
 │   └── anteprima.png           # immagine del README
@@ -170,6 +178,7 @@ tavolo-tikz/
 | Ctrl + D | Duplica |
 | Ctrl + Z / Ctrl + Maiusc + Z | Annulla / Ripeti |
 | `U` | Apre o chiude il pannello degli elementi UML |
+| `M` | Apre o chiude il pannello degli automi |
 | `0` | Adatta la vista alla figura |
 | Spazio + trascina | Sposta la vista |
 | Alt + ↑/↓ nel codice | Aumenta o diminuisce il numero sotto il cursore |

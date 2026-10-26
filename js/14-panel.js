@@ -46,6 +46,10 @@ function updateProps(){
       h += `<label class="full" for="nd-text">testo (LaTeX)</label><textarea id="nd-text">${esc(src.slice(st.text.s, st.text.e))}</textarea>`;
       const shp = (items.find(i=>['circle','rectangle','ellipse','diamond','star','regular polygon','rounded rectangle','trapezium'].includes(i))||'');
       h += `<label for="nd-shape">forma</label>`+sel('nd-shape',[['','rettangolo'],['circle','cerchio'],['ellipse','ellisse'],['diamond','rombo'],['rounded rectangle','arrotondato'],['regular polygon','poligono'],['star','stella']], shp);
+      if (items.some(i=>/^state( with(out)? output)?$/.test(i))){
+        h += `<label for="au-init">iniziale</label><input type="checkbox" id="au-init"${items.some(i=>AUT_INIT_RE.test(itemKey(i)))?' checked':''}>`;
+        h += `<label for="au-acc">accettante</label><input type="checkbox" id="au-acc"${items.some(i=>AUT_ACC_RE.test(itemKey(i)))?' checked':''}>`;
+      }
     }
     const dv = optVal(items,'draw'); const fv = optVal(items,'fill');
     h += `<label>contorno</label>`+swatches('draw', dv===true?'black':dv===null?(isNode?'none':(bareCol||'black')):dv, true);
@@ -95,6 +99,8 @@ function wireProps(si, st, items){
   on('arr', v=>apply(setOptions(si,{remove:isArrowItem, add:v?[v]:[]})));
   on('opac', v=>apply(setOptions(si,{remove:(it,k)=>k==='opacity'||k==='fill opacity', add:v?[(isNode||cmd==='fill'?'fill opacity=':'opacity=')+v]:[]})));
   on('nd-shape', v=>apply(setOptions(si,{remove:(it)=>['circle','rectangle','ellipse','diamond','star','regular polygon','rounded rectangle','trapezium'].includes(it), add:v?[v]:[]})));
+  on('au-init', (v,el)=>apply(setOptions(si,{remove:(it,k)=>AUT_INIT_RE.test(k), add: el.checked?['initial']:[]})));
+  on('au-acc', (v,el)=>apply(setOptions(si,{remove:(it,k)=>AUT_ACC_RE.test(k), add: el.checked?['accepting']:[]})));
   on('nd-font', v=>apply(setOptions(si,{remove:(it,k)=>k==='font', add:v?['font=\\'+v]:[]})));
   on('nd-text', v=>{ const s=st.text; src = src.slice(0,s.s)+v+src.slice(s.e); ed.value=src; store.set('tz-src',src); renderNow(); }, 'input');
   box.querySelectorAll('[data-k]').forEach(inp=>inp.addEventListener('change', ()=>{
@@ -134,6 +140,7 @@ document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('modal').hi
 function figureCode(){ const f=figs[Math.min(figIdx,figs.length-1)]; return f ? src.slice(f.s, f.e) : src; }
 function libsFor(code){
   const L=new Set();
+  if (/[\[,]\s*(state|initial|accepting)\b/.test(code)) L.add('automata');
   if (/Stealth|Latex|Triangle|\{[A-Z][a-z]+\[/.test(code)) L.add('arrows.meta');
   if (/=\s*[\d.]*\s*(cm|mm|pt)?\s*of\s/.test(code)||/=of\s/.test(code)) L.add('positioning');
   if (/\(\s*\$/.test(code)) L.add('calc');
@@ -271,6 +278,18 @@ const EXAMPLES = {
   \draw[->] (b) to[bend left] (d);
   \draw[->] (c) to[bend right] (d);
   \draw[->] (d) to[loop right] (d);
+\end{tikzpicture}`,
+'Automa (automata)': String.raw`\begin{tikzpicture}[->, >=Stealth, shorten >=1pt, auto, node distance=2.8cm, on grid, semithick]
+  \node[state, initial] (q0) {$q_0$};
+  \node[state] (q1) [above right=of q0] {$q_1$};
+  \node[state] (q2) [below right=of q0] {$q_2$};
+  \node[state, accepting] (q3) [below right=of q1] {$q_3$};
+  \path (q0) edge node {$a$} (q1)
+             edge node [swap] {$b$} (q2)
+        (q1) edge [loop above] node {$a$} ()
+             edge node {$b$} (q3)
+        (q2) edge [bend right] node [swap] {$a$} (q3)
+        (q3) edge [bend right] node [swap] {$b$} (q2);
 \end{tikzpicture}`,
 'Albero': String.raw`\begin{tikzpicture}[level distance=13mm, level 1/.style={sibling distance=30mm}, level 2/.style={sibling distance=14mm},
     every node/.style={draw, circle, fill=teal!15, minimum size=7mm}]

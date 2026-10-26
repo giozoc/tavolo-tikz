@@ -28,6 +28,7 @@
     <button class="tb" data-tool="free" title="Mano libera (F)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11c2-5 3 2 5-2s2-5 4-1 2 3 3 1"/></svg></button>
     <button class="tb" data-tool="axis" title="Grafico pgfplots (G)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 2v11.5H14"/><path d="M4 12c3-1 4-8 9-9" stroke-dasharray="0"/></svg><span class="lbl">Axis</span></button>
     <button class="tb" id="b-uml" title="Elementi UML (tikz-uml) — U"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="6" height="5"/><rect x="8.5" y="9.5" width="6" height="5"/><path d="M1.5 4h6M4.5 6.5V12h4"/></svg><span class="lbl">UML</span></button>
+    <button class="tb" id="b-aut" title="Automi (libreria automata) — M"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="10" r="2.8"/><circle cx="12.5" cy="10" r="2.8"/><circle cx="12.5" cy="10" r="1.7"/><path d="M6.8 10h2.5M8.4 8.8l1.1 1.2-1.1 1.2M2.6 7.6C2 3.5 6 3.5 5.4 7.6"/></svg><span class="lbl">Automi</span></button>
   </div>
   <div class="grp">
     <button class="tb" id="b-undo" title="Annulla (Ctrl+Z)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3L2 6l3 3M2 6h8a4 4 0 010 8H6"/></svg></button>
@@ -48,9 +49,13 @@
   <input type="file" id="file" accept=".tex,.tikz,.txt,.pgf" hidden>
 </header>
 <div id="main">
-  <aside id="umlpal" hidden aria-label="Elementi UML">
+  <aside id="umlpal" class="palpane" hidden aria-label="Elementi UML">
     <div class="pane-h"><span>Elementi UML</span><span class="sp"></span><button class="pmin" id="umlpal-x" title="Chiudi il pannello" aria-label="Chiudi il pannello UML">×</button></div>
-    <div id="umlpal-b"></div>
+    <div id="umlpal-b" class="palpane-b"></div>
+  </aside>
+  <aside id="autpal" class="palpane" hidden aria-label="Automi">
+    <div class="pane-h"><span>Automi</span><span class="sp"></span><button class="pmin" id="autpal-x" title="Chiudi il pannello" aria-label="Chiudi il pannello degli automi">×</button></div>
+    <div id="autpal-b" class="palpane-b"></div>
   </aside>
   <section id="left" aria-label="Sorgente TikZ">
     <div class="pane-h"><span>Sorgente</span><span class="sp"></span><span id="pos">r 1, c 1</span></div>
@@ -96,9 +101,11 @@
 <script src="js/08-pgfplots.js"></script>
 <script src="js/09-render.js"></script>
 <script src="js/10-uml.js"></script>
-<script src="js/11-ui.js"></script>
-<script src="js/12-tools.js"></script>
-<script src="js/13-panel.js"></script>
-<script src="js/14-palette.js"></script>
+<script src="js/11-automata.js"></script>
+<script src="js/12-ui.js"></script>
+<script src="js/13-tools.js"></script>
+<script src="js/14-panel.js"></script>
+<script src="js/15-palette.js"></script>
+<script src="js/16-automata-palette.js"></script>
 </body>
 </html>

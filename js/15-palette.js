@@ -115,6 +115,7 @@ function umlPalBuild(){
     `</div></details>`).join('') + `<p class="palhint">Elementi: clic sul disegno. Relazioni e chiamate: clic sui due elementi da collegare. <b>Esc</b> annulla.</p>`;
 }
 function umlPalOpen(on){
+  if (on && typeof autPalOpen==='function' && !$('autpal').hidden) autPalOpen(false);
   $('umlpal').hidden=!on; $('b-uml').classList.toggle('on', on); store.set('tz-uml', on?'1':'');
   if (!on && tool==='uml') setTool('select');
   requestAnimationFrame(()=>applyView());
