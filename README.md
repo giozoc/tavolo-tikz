@@ -3,7 +3,7 @@
 [![Demo](https://img.shields.io/badge/demo-online-blue)](https://giozoc.github.io/tavolo-tikz/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-blue)](#stack-tecnologico)
 [![LaTeX](https://img.shields.io/badge/TikZ%20%7C%20pgfplots-supportati-blue)](#funzionalità)
-[![Licenza](https://img.shields.io/badge/license-MIT-blue.svg)](#licenza)
+[![Licenza](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](#licenza)
 
 ![Anteprima di Tavolo TikZ](docs/anteprima.png)
 
