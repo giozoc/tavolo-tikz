@@ -2,7 +2,44 @@
 let S = '';           // sorgente intera
 let R = null;         // stato del rendering corrente
 let HITW = .25;       // larghezza area di click (cm), aggiornata dallo zoom
-function newRender(){ return {out:[], bg:[], names:{}, handles:[], stmts:[], stmtByStart:new Map(), warns:[], nodes:[], axes:[], clipN:0, ops:0}; }
+let DATA = {};        // file di dati caricati accanto al .tex: nome → testo
+function newRender(){ return {out:[], bg:[], names:{}, handles:[], stmts:[], stmtByStart:new Map(), warns:[], nodes:[], axes:[], clipN:0, ops:0, tables:{}, dataUsed:new Set(), pins:[]}; }
+
+/* ---------- dati da file esterni ---------- */
+const DATA_EXT = /\.(csv|dat|txt|tsv|data|tab)$/i;
+const baseName = f => String(f).trim().replace(/^.*[\\/]/,'');
+function dataFile(name){
+  const n=String(name).trim();
+  if (DATA[n]!==undefined) return n;
+  const b=baseName(n); if (DATA[b]!==undefined) return b;
+  const lc=Object.keys(DATA).find(k=>k.toLowerCase()===b.toLowerCase());
+  return lc || null;
+}
+/* testo della tabella: dati in linea, macro di \pgfplotstableread o nome di file; null se mancante */
+function tableText(txt, ctx){
+  const t=txt.trim();
+  const mm=/^\\([a-zA-Z@]+)$/.exec(t);
+  if (mm){ const tb=R.tables[mm[1]]; if (!tb){ ctx.warn('tabella \\'+mm[1]+' non definita: usa \\pgfplotstableread'); return null; } return tb; }
+  if (/^[^\s{}\\%]+$/.test(t) && (DATA_EXT.test(t) || !/^[-+\d.eE]+$/.test(t))){
+    const k=dataFile(t); R.dataUsed.add(baseName(t));
+    if (k===null){ ctx.warn(`file «${baseName(t)}» non caricato: aprilo con «Dati» (o trascinalo) insieme al .tex`); return null; }
+    return {text:DATA[k], opts:'', file:k};
+  }
+  return {text:txt, opts:''};
+}
+/* righe e colonne di una tabella pgfplots */
+function tableRows(text, topt, ctx, file){
+  const sk = parseInt(topt['skip first n'])||0;
+  let lines = topt['row sep']==='\\\\' ? text.split('\\\\') : text.split(/\r?\n|\\\\/);
+  lines = lines.map(r=>r.trim()).filter(r=>r && !/^[#%]/.test(r)).slice(sk);
+  const cs = String(topt['col sep']||'space').trim();
+  let sep = {comma:/\s*,\s*/, semicolon:/\s*;\s*/, tab:/\t/, colon:/\s*:\s*/, ampersand:/\s*&\s*/, braces:/\}\s*\{/}[cs] || /\s+/;
+  if (cs==='space' && lines.length && lines.every(l=>/,/.test(l) && !/\s/.test(l.replace(/,\s+/g,',')))){
+    ctx.warn((file?'«'+file+'»':'la tabella')+' è separata da virgole: aggiungi col sep=comma alle opzioni di table');
+    sep = /\s*,\s*/;
+  }
+  return lines.map(l=>l.replace(/\s+%.*$/,'').replace(/^\{|\}$/g,'').split(sep).map(c=>c.trim().replace(/^"(.*)"$/,'$1')));
+}
 
 function skipWS(i, b=S.length){
   for(;;){
@@ -116,6 +153,10 @@ function run(a, b, ctx){
         if (name==='pgfplotsset') ctx.axisDefaults.push(g.text);
         else applyOpts(cloneStyle(ctx.style), g.text, {vars:ctx.vars, styles:ctx.styles, warn:()=>{}});
         i=g.e+1; break; }
+      case 'tikzcdset': case 'ctikzset': {
+        const g=readGroup(cmd.end); if(!g){ i=cmd.end; break; }
+        if (name==='tikzcdset') (R.cdset=R.cdset||[]).push(subVars(g.text, ctx.vars)); else czSet(g.text, lctx);
+        i=g.e+1; break; }
       case 'tikzstyle': {
         const g=readGroup(cmd.end); let j=g?g.e+1:cmd.end; j=skipWS(j,b); if(S[j]==='=') j++;
         const op=readOpt(j); if (g&&op){ ctx.styles[g.text.trim()]=op.text; j=op.e+1; }
@@ -147,9 +188,19 @@ function run(a, b, ctx){
         } else i=j;
         break; }
       case 'usetikzlibrary': case 'usepgfplotslibrary': case 'pgfdeclarelayer': case 'pgfsetlayers': case 'usepackage': case 'centering': case 'small': case 'footnotesize': case 'scriptsize': case 'tiny': case 'large': case 'Large': case 'normalsize':
-      case 'label': case 'caption': case 'resizebox': case 'scalebox': case 'tikzexternalize': case 'pgfplotstableread': case 'makeatletter': case 'makeatother': case 'pgfdeclarepatternformonly': case 'tikzfading': case 'newlength': case 'setlength': case 'pgfmathdeclarefunction': {
+      case 'pgfplotstableread': {
+        // \pgfplotstableread[opzioni]{dati o file}\macro  (anche {\macro})
+        let j=cmd.end; const op=readOpt(j); if (op) j=op.e+1;
+        const g=readGroup(j); if (!g){ i=cmd.end; break; } j=skipWS(g.e+1,b);
+        let nm=null; const g2 = S[j]==='{' ? readGroup(j) : null;
+        const m=/^\\([a-zA-Z@]+)/.exec(g2 ? g2.text.trim() : S.slice(j,j+60));
+        if (m){ nm=m[1]; j = g2 ? g2.e+1 : j+m[0].length; }
+        if (!nm){ warn('\\pgfplotstableread: manca il nome della macro'); i=j; break; }
+        const tb=tableText(g.text, lctx);
+        if (tb) R.tables[nm]={text:tb.text, opts:op?op.text:'', file:tb.file};
+        i=j; break; }
+      case 'label': case 'caption': case 'resizebox': case 'scalebox': case 'tikzexternalize': case 'makeatletter': case 'makeatother': case 'pgfdeclarepatternformonly': case 'tikzfading': case 'newlength': case 'setlength': case 'pgfmathdeclarefunction': {
         let j=cmd.end; for(let k=0;k<4;k++){ const jj=skipWS(j,b); if(S[jj]==='{'||S[jj]==='['){ const e=mcS(jj); if(e<0) break; j=e+1; } else break; }
-        if (name==='pgfplotstableread') warn('\\pgfplotstableread non supportato: usa \\addplot table {...}');
         i=j; break; }
       case 'addplot': case 'addplot+': case 'addplot3': case 'addplot3+': case 'legend': case 'addlegendentry': case 'closedcycle':
         if (ctx.axis){ i = axisCmd(i, name, cmd.end, b, lctx); }

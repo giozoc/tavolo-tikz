@@ -39,7 +39,7 @@ function autPalBuild(){
     `</div></details>`).join('') + `<p class="palhint">Stati: clic sul disegno. Transizioni: clic sui due stati da collegare. Cappi e modifiche: clic sullo stato. <b>Esc</b> annulla.</p>`;
 }
 function autPalOpen(on){
-  if (on && !$('umlpal').hidden) umlPalOpen(false);
+  if (on) palExclusive('autpal');
   $('autpal').hidden=!on; $('b-aut').classList.toggle('on', on); store.set('tz-aut', on?'1':'');
   if (!on && tool==='automa') setTool('select');
   requestAnimationFrame(()=>applyView());
@@ -59,7 +59,8 @@ $('autpal-b').addEventListener('click', e=>{
 });
 $('b-aut').onclick=()=>autPalOpen($('autpal').hidden);
 $('autpal-x').onclick=()=>autPalOpen(false);
-if (store.get('tz-aut') && $('umlpal').hidden) autPalOpen(true);
+PALS.push({id:'autpal', open:on=>autPalOpen(on)});
+if (store.get('tz-aut') && palsClosed()) autPalOpen(true);
 
 /* ---------- inserimento ---------- */
 function autFresh(){

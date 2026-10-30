@@ -362,10 +362,11 @@ function placeNodeOnPath(w, q, ps){
 function toOp(j, e, ps, ctx, isEdge){
   j=skipWS(j,e);
   const lst = cloneStyle(ps.st);
-  let opText='';
-  if (S[j]==='['){ const en=mcS(j); opText=S.slice(j+1,en); j=skipWS(en+1,e); }
+  let opText='', opSpan=null;
+  if (S[j]==='['){ const en=mcS(j); opText=S.slice(j+1,en); opSpan={s:j, e:en}; j=skipWS(en+1,e); }
   if (isEdge){ lst.draw = lst.draw||true; lst.labels=[]; lst.name=null; }
-  applyOpts(lst, opText, ctx);
+  const cz = isEdge ? null : czParse(opText, ctx);
+  applyOpts(lst, cz ? cz.rest : opText, ctx);
   // nodi sull'edge
   const sub = {...ps, st:lst, subs:[], waiting:[], nodes:ps.nodes};
   const saveWait = ps.waiting; ps.waiting=[];
@@ -378,6 +379,16 @@ function toOp(j, e, ps, ctx, isEdge){
   j=r.end;
   if (r.h) addHandle(r.h, r.p, ps.sIdx);
   const a=ps.cur||ps.frame.map(0,0), an=ps.curNode, b=r.p, bn=r.node;
+  // componente circuitikz: fili, simbolo ed etichette
+  if (cz){
+    const a2 = an?nodeBorderToward(an,b):a, b2 = bn?nodeBorderToward(bn,a):b;
+    czTo(ps, a2, b2, lst, cz, ctx);
+    if (ps.rec && !(ps.rec.cz||[]).some(x=>x.opts.s===opSpan.s)) (ps.rec.cz=ps.rec.cz||[]).push({opts:opSpan, comp:cz.comp});
+    ps.cur=b; ps.curNode=bn; ps.relBase=b; ps.lastSeg={k:'L', a:a2, b:b2};
+    flushPending(ps, ps.lastSeg);
+    ps.waiting = saveWait.concat(ps.waiting||[]);
+    return j;
+  }
   // curva
   let seg;
   const straight = lst.bend===null && lst.out===null && lst.in===null && !lst.loop && !(an && an===bn);
@@ -431,7 +442,11 @@ function plotOp(j, e, ps, ctx){
     const xs=[]; if (lst.samplesAt) xs.push(...expandList(lst.samplesAt,ctx.vars).map(Number)); else for(let k=0;k<n;k++) xs.push(d0+(d1-d0)*k/(n-1));
     for (const x of xs){ const vars={...ctx.vars,[v]:x}; try{ const X=lenCm(unbrace(q[0]),{vars}), Y=lenCm(unbrace(q[1]),{vars}); if(isFinite(X)&&isFinite(Y)) pts.push(ps.frame.map(X,Y)); }catch(err){ ctx.warn(err.message); break; } }
   } else if (S.startsWith('function',j)){ ctx.warn('plot function (gnuplot) non supportato'); const g=readGroup(skipWS(j+8,e)); return g?g.e+1:e; }
-  else if (S.startsWith('file',j)){ ctx.warn('plot file non supportato'); const g=readGroup(skipWS(j+4,e)); return g?g.e+1:e; }
+  else if (S.startsWith('file',j)){
+    const g=readGroup(skipWS(j+4,e)); if (!g){ ctx.warn('plot file: manca {nome del file}'); return e; }
+    j=g.e+1; const tb=tableText(g.text, ctx); if (!tb) return j;
+    for (const r of tableRows(tb.text, {}, ctx, tb.file)){ const x=parseFloat(r[0]), y=parseFloat(r[1]); if (isFinite(x)&&isFinite(y)) pts.push(ps.frame.map(x,y)); }
+  }
   if (!pts.length) return j;
   const cont = ps.pend && ps.pend.t==='L'; ps.pend=null;
   if (!cont || !curSub(ps)) startSub(ps, pts[0]); else pushOp(ps,{t:'L',p:pts[0]});

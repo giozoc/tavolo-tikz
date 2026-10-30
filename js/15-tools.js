@@ -98,6 +98,22 @@ function moveStmtEdits(si, delta){
   return {edits:out};
 }
 
+/* nei circuiti gli estremi degli altri elementi che toccano i capi spostati li seguono, così restano collegati */
+function moveConnectedEdits(si, delta){
+  const r = moveStmtEdits(si, delta);
+  const f = figs[Math.min(figIdx, figs.length-1)];
+  if (r.opt || !(f && f.env==='circuitikz') && !lastR.stmts.some(s=>s.cz)) return r;
+  const own = lastR.pins.filter(q=>q.s===si).map(q=>q.p).concat(lastR.handles.filter(h=>h.stmt===si && !h.base && h.role!=='ctl').map(h=>h.p));
+  const touches = p => own.some(q=>Math.abs(q[0]-p[0])<1e-4 && Math.abs(q[1]-p[1])<1e-4);
+  const seen = new Set();
+  for (const h of lastR.handles){
+    if (h.stmt===si || h.base || h.role==='ctl' || h.h.kind!=='abs' || h.h.proxy || !touches(h.p)) continue;
+    const k=handleKey(h); if (seen.has(k)) continue; seen.add(k);
+    r.edits.push(...handleEdits(h, V.add(h.p, delta)));
+  }
+  return r;
+}
+
 /* ---------- opzioni ---------- */
 function optItems(st){ return st.opts ? splitTop(src.slice(st.opts.s+1, st.opts.e)).map(s=>s.trim()).filter(Boolean) : []; }
 const itemKey = it => { const k=it.indexOf('='); return (k<0?it:it.slice(0,k)).trim(); };
@@ -187,8 +203,18 @@ function fmtPt(page, region){
   const s = snapPage(page); return `(${fmt(s[0],3)},${fmt(s[1],3)})`;
 }
 function ensurePicture(){
-  if (findFigures(src).length) return;
-  const t = (src.trim()? src.replace(/\s*$/,'\n\n') : '') + '\\begin{tikzpicture}\n\\end{tikzpicture}\n';
+  // un tikzcd non accetta istruzioni TikZ: in quel caso si apre una nuova figura
+  const f = figs[Math.min(figIdx, figs.length-1)];
+  if (f && f.env!=='tikzcd') return;
+  addFigure('\\begin{tikzpicture}\n\\end{tikzpicture}\n');
+}
+/* aggiunge una figura vuota (prima di \end{document}, se c'è) e la rende corrente */
+function addFigure(code){
+  const m = /\\end\s*\{document\}/.exec(src);
+  let t, at;
+  if (m){ at = m.index; t = src.slice(0,at).replace(/\s*$/,'\n\n') + code + '\n' + src.slice(at); at = src.slice(0,m.index).replace(/\s*$/,'\n\n').length; }
+  else { t = (src.trim()? src.replace(/\s*$/,'\n\n') : ''); at = t.length; t += code; }
+  figIdx = findFigures(t).findIndex(f=>f.s>=at);
   setSource(t);
 }
 function insertStmt(code, region, opt={}){
@@ -241,7 +267,7 @@ cv.addEventListener('pointerdown', e=>{
       if (selStart!==lastR.stmts[hi.stmt].start) selHandle=null;
       selStart = lastR.stmts[hi.stmt].start; selNode = hi.node;
       const nd = hi.node!==null && hi.node!==undefined ? lastR.nodes[hi.node] : null;
-      if (nd && !nd.head && !nd.atLit && nd.text){
+      if (nd && !nd.head && !nd.atLit && nd.text && !nd.cz){   // i simboli dei circuiti si spostano con l'istruzione
         const it = nodeItems(hi.node); const g = k => { const v=optVal(it,k); try{ return v&&v!==true ? evalLen(String(v),{},PT)/PT : 0; }catch(_){ return 0; } };
         drag = {kind:'label', n:hi.node, start:page, src0:src, R0:lastR, moved:false, x0:g('xshift'), y0:g('yshift')};
       } else
@@ -254,6 +280,8 @@ cv.addEventListener('pointerdown', e=>{
   }
   if (tool==='uml'){ umlCanvasClick(page, hi); return; }
   if (tool==='automa'){ autCanvasClick(page, hi); return; }
+  if (tool==='cd'){ cdCanvasClick(page, hi); return; }
+  if (tool==='circ'){ czCanvasClick(page, hi); return; }
   const region = axisAt(page);
   const sp = region ? page : snapPage(page);
   if (tool==='node'){
@@ -284,6 +312,7 @@ cv.addEventListener('pointermove', e=>{
   else { const s=snapPage(page); $('st-xy').textContent=`x ${fmt(s[0],2)}, y ${fmt(s[1],2)}`; }
   if (pan){ view.x = pan.vx - (e.clientX-pan.x)/view.k; view.y = pan.vy - (e.clientY-pan.y)/view.k; applyView(); return; }
   if (tool==='line' && linePts){ updateGhost(linePts.region?page:snapPage(page)); return; }
+  if (tool==='circ' && !drag && !pan){ czHover(page); return; }
   if (!drag) return;
   freeMove = e.altKey;
   if (lastMove) { lastMove.page=page; return; }
@@ -321,7 +350,7 @@ function dragMove(page, e){
     drag.moved=true;
     if (snapOn && !freeMove){ d = [Math.round(d[0]/snapStep)*snapStep, Math.round(d[1]/snapStep)*snapStep]; }
     const saveR = lastR; lastR = drag.R0;
-    const r = moveStmtEdits(drag.si, d);
+    const r = moveConnectedEdits(drag.si, d);
     let t = null;
     if (r.opt) t = setOptions(drag.si, {remove:(it,k)=>k===r.opt[0], add:[r.opt[0]+'='+r.opt[1]]}, drag.src0);
     else if (r.edits.length) t = applyEdits(drag.src0, r.edits);
@@ -350,6 +379,7 @@ cv.addEventListener('pointerup', e=>{
   if (d.kind==='tool'){ finishTool(d, e); ghost=''; drawOverlay(); }
 });
 cv.addEventListener('dblclick', e=>{
+  if (Date.now()-czWireDone<500) return;
   if (tool==='line' && linePts){ linePts.pts.pop(); finishLine(false); return; }
   const hi=hitInfo(e);
   if (hi.node!==null && hi.node!==undefined) inlineEdit(hi.node);
@@ -428,6 +458,8 @@ function setTool(t){
   tool=t; ghost=''; drawOverlay();
   if (typeof umlPalSync==='function') umlPalSync();
   if (typeof autPalSync==='function') autPalSync();
+  if (typeof cdPalSync==='function') cdPalSync();
+  if (typeof czPalSync==='function') czPalSync();
   document.querySelectorAll('#tools [data-tool]').forEach(b=>b.classList.toggle('on', b.dataset.tool===t));
   cv.setAttribute('class', t==='select' ? 't-sel' : 't-draw');
   const tips = {node:'Clic per inserire un nodo', line:'Clic per aggiungere punti · doppio clic o Invio per finire · clic sul primo punto per chiudere', arrow:'Trascina tra due punti o due nodi', rect:'Trascina per disegnare un rettangolo', circle:'Trascina dal centro', ellipse:'Trascina il riquadro dell\'ellisse', bezier:'Trascina, poi regola i punti di controllo', free:'Disegna a mano libera', axis:'Trascina il riquadro del grafico'};
@@ -443,13 +475,15 @@ function deleteSel(){
   const si=curStmt(); if (si<0) return;
   const st=lastR.stmts[si];
   let s=st.start, e=st.end;
+  if (st.cd && st.cd.cell){ s=st.cd.s; e=st.cd.e; selStart=null; setSource(src.slice(0,s)+src.slice(e)); toast('Cella svuotata'); return; }
   const ls=src.lastIndexOf('\n',s-1)+1; if (/^\s*$/.test(src.slice(ls,s))) s=ls;
   if (src[e]==='\n') e++;
   selStart=null; setSource(src.slice(0,s)+src.slice(e)); toast('Eliminato');
 }
 function duplicateSel(){
   const si=curStmt(); if (si<0) return;
-  const st=lastR.stmts[si]; const ls=src.lastIndexOf('\n',st.start-1)+1; const ind=/^\s*/.exec(src.slice(ls,st.start))[0];
+  const st=lastR.stmts[si];
+  if (st.cd){ toast('Nei diagrammi tikz-cd si aggiunge dal pannello tikz-cd'); return; } const ls=src.lastIndexOf('\n',st.start-1)+1; const ind=/^\s*/.exec(src.slice(ls,st.start))[0];
   let code=src.slice(st.start, st.end);
   // sposta di un passo le coordinate letterali
   const off = snapStep*2;
@@ -474,23 +508,26 @@ document.addEventListener('keydown', e=>{
     freeMove = fine || !snapOn;
     const h = selHandle!==null ? stmtHandles(curStmt())[selHandle] : null;
     if (h){ setSource(applyEdits(src, handleEdits(h, V.add(h.p, d)))); }
-    else { const r=moveStmtEdits(curStmt(), d); if (r.opt) setSource(setOpt(curStmt(), r.opt[0], r.opt[1])); else if (r.edits.length) setSource(applyEdits(src, r.edits)); }
+    else { const r=moveConnectedEdits(curStmt(), d); if (r.opt) setSource(setOpt(curStmt(), r.opt[0], r.opt[1])); else if (r.edits.length) setSource(applyEdits(src, r.edits)); }
     freeMove=false; return;
   }
   if (e.ctrlKey||e.metaKey||e.altKey) return;
   if (e.key==='Escape' && selHandle!==null){ selHandle=null; drawOverlay(); updateProps(); return; }
   if (e.key==='Escape'){ if (linePts){ finishLine(false); } else if (tool!=='select') setTool('select'); else { selStart=null; updateHL(); drawOverlay(); updateProps(); } return; }
   if (e.key==='Enter' && linePts){ finishLine(false); return; }
+  if (e.key==='Enter' && tool==='circ' && czFinishWire()) return;
   if ((e.key==='Delete'||e.key==='Backspace') && curStmt()>=0){ e.preventDefault(); deleteSel(); return; }
   if (e.key.startsWith('Arrow') && curStmt()>=0){
     e.preventDefault(); const s=e.shiftKey?snapStep*4:snapStep;
     const d={ArrowLeft:[-s,0],ArrowRight:[s,0],ArrowUp:[0,s],ArrowDown:[0,-s]}[e.key];
-    const r=moveStmtEdits(curStmt(), d);
+    const r=moveConnectedEdits(curStmt(), d);
     if (r.opt) setSource(setOpt(curStmt(), r.opt[0], r.opt[1])); else if (r.edits.length) setSource(applyEdits(src, r.edits));
     return;
   }
   if (e.key.toLowerCase()==='u'){ umlPalOpen($('umlpal').hidden); return; }
   if (e.key.toLowerCase()==='m'){ autPalOpen($('autpal').hidden); return; }
+  if (e.key.toLowerCase()==='d'){ cdPalOpen($('cdpal').hidden); return; }
+  if (e.key.toLowerCase()==='k'){ czPalOpen($('czpal').hidden); return; }
   const map={v:'select',n:'node',l:'line',a:'arrow',r:'rect',c:'circle',e:'ellipse',b:'bezier',f:'free',g:'axis'};
   if (map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
   if (e.key==='0') fitView();

@@ -1,18 +1,22 @@
 /* ============ RENDER DI UNA FIGURA ============ */
 function findFigures(src){
-  const out=[]; const re=/\\begin\s*\{tikzpicture\}/g; let m;
+  // tikzpicture, circuitikz (una tikzpicture con le impostazioni dei circuiti) e tikzcd
+  const out=[]; const re=/\\begin\s*\{(tikzpicture|circuitikz|tikzcd)\}/g; let m;
   while ((m=re.exec(src))){
-    const saveS=S; S=src; const en=findEnd('tikzpicture', m.index+m[0].length, src.length); S=saveS;
-    if (!en) { out.push({s:m.index, bodyS:m.index+m[0].length, bodyE:src.length, endS:src.length, e:src.length, open:true}); break; }
-    out.push({s:m.index, bodyS:m.index+m[0].length, bodyE:en.s, endS:en.s, e:en.e});
+    if (src.lastIndexOf('%', m.index)>src.lastIndexOf('\n', m.index)) continue;
+    const env=m[1];
+    const saveS=S; S=src; const en=findEnd(env, m.index+m[0].length, src.length); S=saveS;
+    if (!en) { out.push({s:m.index, env, bodyS:m.index+m[0].length, bodyE:src.length, endS:src.length, e:src.length, open:true}); break; }
+    out.push({s:m.index, env, bodyS:m.index+m[0].length, bodyE:en.s, endS:en.s, e:en.e});
     re.lastIndex=en.e;
   }
   return out;
 }
-const PRE_RE = /\\(tikzset|tikzumlset|pgfplotsset|definecolor|colorlet|tikzstyle|newcommand|renewcommand|def|pgfmathsetmacro)\b/g;
+const PRE_RE = /\\(tikzset|tikzumlset|tikzcdset|ctikzset|pgfplotsset|pgfplotstableread|definecolor|colorlet|tikzstyle|newcommand|renewcommand|def|pgfmathsetmacro)\b/g;
 function renderFigure(src, fig){
   S = src; R = newRender(); DEFS=[]; DEFN=0; userColors={};
   const base = {frame:affineFrame(M_ID), style:newStyle(), styles:{}, vars:{}, warn:mkWarn(fig?fig.s:0), axis:null, axisDefaults:[], scope:{clip:null}, layer:null};
+  czReset(src, fig);
   // preambolo: comandi fuori dalle figure
   const figs = fig ? [fig] : [];
   PRE_RE.lastIndex=0; let m;
@@ -27,6 +31,11 @@ function renderFigure(src, fig){
   }
   R.warns = [];
   let bs=0, be=src.length;
+  if (fig && fig.env==='tikzcd'){
+    R.picStart = fig.s; R.insertAt = fig.endS;
+    try { cdFigure(fig, base); } catch(e){ console.error(e); R.warns.push({pos:fig.s, msg:'tikzcd: '+e.message, kind:'e'}); }
+    return `<defs>${DEFS.join('')}</defs>${R.bg.join('')}${R.out.join('')}`;
+  }
   if (fig){
     bs=fig.bodyS; be=fig.bodyE;
     const op=readOpt(bs);

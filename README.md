@@ -2,7 +2,7 @@
 
 [![Demo](https://img.shields.io/badge/demo-online-blue)](https://giozoc.github.io/tavolo-tikz/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-blue)](#stack-tecnologico)
-[![LaTeX](https://img.shields.io/badge/TikZ%20%7C%20pgfplots-supportati-blue)](#funzionalità)
+[![LaTeX](https://img.shields.io/badge/TikZ%20%7C%20pgfplots%20%7C%20tikz--cd%20%7C%20circuitikz-supportati-blue)](#funzionalità)
 [![Licenza](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](#licenza)
 
 ![Anteprima di Tavolo TikZ](docs/anteprima.png)
@@ -11,7 +11,7 @@
 
 ## Documentazione
 
-Tavolo TikZ è un **editor visuale per figure TikZ e grafici pgfplots** che funziona interamente nel browser, senza installare nulla e senza compilare con LaTeX a ogni modifica.
+Tavolo TikZ è un **editor visuale per figure TikZ, grafici pgfplots, diagrammi commutativi e circuiti** che funziona interamente nel browser, senza installare nulla e senza compilare con LaTeX a ogni modifica.
 
 - **Demo online**
   L'editor pubblicato con GitHub Pages:
@@ -23,6 +23,7 @@ Tavolo TikZ è un **editor visuale per figure TikZ e grafici pgfplots** che funz
   * Motore pgfplots per gli ambienti `axis` e i comandi `\addplot`
   * Interfaccia con editor del codice, area di disegno e pannello proprietà
   * Esempi `.tex` compilabili con pdfLaTeX per il confronto con l'anteprima
+  * Test automatici con Playwright, tra cui il confronto tra l'anteprima e il PDF compilato
 
 ---
 
@@ -45,6 +46,7 @@ Scrivere figure in TikZ significa di solito modificare un numero, ricompilare, g
 **pgfplots**
 - `axis`, `semilogxaxis`, `semilogyaxis`, `loglogaxis`
 - `\addplot` con funzioni `{x^2}`, parametriche, `coordinates`, `table {…}`, `fill between`
+- **dati da file**: `\addplot table[x=…, y=…, col sep=comma] {dati.csv}`, `\pgfplotstableread{dati.csv}\tabella` con `table {\tabella}`, `plot file {…}` di TikZ; il pulsante **Dati** (o il trascinamento del `.tex` insieme ai suoi file) carica `.csv`, `.dat`, `.tsv` accanto al sorgente, e restano nel browser fino a quando li rimuovi
 - barre `ybar`/`xbar`, `stacked`, `nodes near coords`, `symbolic x coords`, `xtick=data`
 - `axis lines`, `grid`, tick personalizzati, `axis equal`, legende, coordinate `axis cs:`
 
@@ -70,6 +72,18 @@ Scrivere figure in TikZ significa di solito modificare un numero, ricompilare, g
 - stili `every state`, `every initial by arrow`, `every accepting by arrow`; posizionamento con `on grid` e `node distance`
 - transizioni con `edge`, `bend left`/`bend right`, cappi `loop above`/`below`/`left`/`right` verso `()`, etichette con `auto` e `swap`
 - pulsante **Automi** (tasto `M`): apre un pannello per inserire stati con un clic sul disegno, transizioni e transizioni curve con un clic sui due stati, cappi con un clic sullo stato; rende uno stato iniziale o accettante con un clic, e lo stesso si fa dalle caselle del pannello proprietà
+
+**tikz-cd** (`\usepackage{tikz-cd}`)
+- ambiente `tikzcd` con `row sep`, `column sep`, `sep` (anche `small`, `large`, `huge`…), `cells`, `arrows`, `labels`, `\tikzcdset`, `ampersand replacement`, opzioni di cella `|[…]|`
+- `\arrow`/`\ar` con direzioni (`r`, `dr`, `uul`…), `from`/`to`, e le forme brevi `\rar`, `\dar`…; sintassi vecchia `\arrow{r}{f}`
+- etichette `"f"`, `"f"'`, `description`, `near start`, `marking`; stili `Rightarrow`, `hook`, `two heads`, `tail`, `mapsto`, `equal`, `dashed`, `squiggly`, `phantom` (angoli di pullback), `crossing over`, `bend left`, `shift left`/`right`, `start anchor`/`end anchor`, cappi
+- pulsante **tikz-cd** (tasto `D`): oggetti con un clic in una cella (righe e colonne si aggiungono da sole, anche sopra e a sinistra), frecce con un clic sui due oggetti; il pannello proprietà cambia etichetta, lato, tipo, tratto, curvatura e direzione
+
+**circuitikz** (`\usepackage{circuitikz}`)
+- componenti sui percorsi `to[…]`: `R`, `C`, `L`, `V`, `I`, `sV`, `battery1`, `D`, `leD`, `zD`, `lamp`, `fuse`, `switch`, `ammeter`, `voltmeter`, `short`, `open`, con stile americano o europeo (`\usepackage[european]{circuitikz}`, `\ctikzset`)
+- etichette `R=$R_1$`, `l`, `l_`, `a`, tensioni `v`, `v_`, `v<`, correnti `i`, `i_`, `i<`, poli `*-*`, `o-o`, `-*`, `invert`, `mirror`, `bipoles/length`
+- nodi `ground`, `rground`, `sground`, `vcc`, `vee`, `circ`, `ocirc`, `op amp` (ancore `-`, `+`, `out`), `npn`/`pnp` (`B`, `C`, `E`), `nmos`/`pmos` (`G`, `D`, `S`); anche l'ambiente `circuitikz`
+- pulsante **Circuiti** (tasto `K`): componenti con un clic sui due capi, nodi con un clic sul disegno; il pannello proprietà cambia tipo ed etichetta di ogni componente del percorso
 
 **Modifica visuale**
 - strumenti: nodo, linea, freccia (si aggancia ai nodi), rettangolo, cerchio, ellisse, Bézier, mano libera, grafico
@@ -122,12 +136,17 @@ tavolo-tikz/
 │   ├── 09-render.js            # rendering di una figura
 │   ├── 10-uml.js               # comandi tikz-uml (classi, pacchetti, casi d'uso, stati)
 │   ├── 11-automata.js          # libreria automata (stati iniziali e accettanti)
-│   ├── 12-ui.js                # editor del codice e vista
-│   ├── 13-tools.js             # strumenti, trascinamento, rotazione
-│   ├── 14-panel.js             # pannello proprietà, esportazione, esempi
-│   ├── 15-palette.js           # pannello degli elementi UML
-│   └── 16-automata-palette.js  # pannello degli automi
-├── esempi/                     # figure .tex compilabili con pdfLaTeX
+│   ├── 12-tikzcd.js            # diagrammi commutativi (ambiente tikzcd)
+│   ├── 13-circuitikz.js        # componenti e nodi di circuitikz
+│   ├── 14-ui.js                # editor del codice e vista
+│   ├── 15-tools.js             # strumenti, trascinamento, rotazione
+│   ├── 16-panel.js             # pannello proprietà, esportazione, esempi, file di dati
+│   ├── 17-palette.js           # pannello degli elementi UML
+│   ├── 18-automata-palette.js  # pannello degli automi
+│   ├── 19-cd-palette.js        # pannello di tikz-cd
+│   └── 20-circuit-palette.js   # pannello dei circuiti
+├── esempi/                     # figure .tex compilabili con pdfLaTeX (e i loro file di dati)
+├── tests/                      # test con Playwright e confronto con pdflatex
 ├── docs/
 │   └── anteprima.png           # immagine del README
 └── LICENSE
@@ -167,6 +186,21 @@ tavolo-tikz/
 
 ---
 
+## Test
+
+La cartella `tests/` contiene prove con [Playwright](https://playwright.dev/python/) che aprono l'editor in Chromium senza interfaccia:
+
+```bash
+python3 -m pip install -r tests/requirements.txt
+python3 -m playwright install chromium
+python3 tests/test_ui.py         # scenari d'uso con mouse e tastiera
+python3 tests/test_pdflatex.py   # confronto tra anteprima e PDF compilato
+```
+
+`test_pdflatex.py` compila ogni esempio di `esempi/` con pdflatex, rasterizza il PDF e l'SVG esportato dall'editor alla stessa scala e misura quanto i tratti dei due disegni coincidono (e quanto differiscono le dimensioni). I punteggi di riferimento stanno in `tests/baseline.json`: se una modifica peggiora un esempio la prova fallisce, e in `tests/out/` resta l'immagine sovrapposta (PDF in blu, anteprima in rosso). Dopo un miglioramento voluto, `python3 tests/test_pdflatex.py --update` aggiorna il riferimento. Gli esempi che non compilano (per esempio quelli UML senza `tikz-uml.sty`) vengono saltati.
+
+---
+
 ## Scorciatoie
 
 | Tasto | Azione |
@@ -179,6 +213,8 @@ tavolo-tikz/
 | Ctrl + Z / Ctrl + Maiusc + Z | Annulla / Ripeti |
 | `U` | Apre o chiude il pannello degli elementi UML |
 | `M` | Apre o chiude il pannello degli automi |
+| `D` | Apre o chiude il pannello di tikz-cd |
+| `K` | Apre o chiude il pannello dei circuiti |
 | `0` | Adatta la vista alla figura |
 | Spazio + trascina | Sposta la vista |
 | Alt + ↑/↓ nel codice | Aumenta o diminuisce il numero sotto il cursore |
@@ -187,7 +223,9 @@ tavolo-tikz/
 
 ## Limiti Noti
 
-Non sono ancora supportati l'operazione `let`, i grafici 3D (`\addplot3`), `groupplot`, le decorazioni e i dati letti da file esterni (`table {dati.csv}`): in questi casi l'editor mostra un avviso e prosegue con il resto della figura.
+Non sono ancora supportati l'operazione `let`, i grafici 3D (`\addplot3`), `groupplot` e le decorazioni: in questi casi l'editor mostra un avviso e prosegue con il resto della figura. I file di dati vanno caricati nell'editor: il browser non può leggere da solo i file accanto al `.tex`.
+
+Di circuitikz sono disegnati i componenti più comuni, con le misure del pacchetto; quelli mancanti producono un avviso. Le frecce di tikz-cd usano le punte di TikZ al posto di quelle Computer Modern.
 
 Di tikz-uml l'aspetto è un'approssimazione di quello del pacchetto, quindi conviene sempre verificare con pdfLaTeX. Il pacchetto tikz-uml non fa parte di TeX Live né di MiKTeX: per compilare il codice esportato va scaricato `tikz-uml.sty` dal [sito dell'autore](https://perso.ensta-paris.fr/~kielbasi/tikzuml/).
 

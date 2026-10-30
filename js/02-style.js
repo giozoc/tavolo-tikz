@@ -59,6 +59,7 @@ function applyKey(st, k, v, ctx, depth){
     if (LW[k]!==undefined){ st.lw=LW[k]*PT; return null; }
     const ar = parseArrowSpec(k); if (ar && k.includes('-')){ st.arrows=ar; return null; }
     if (SHAPES.includes(k)){ st.shape=k; return null; }
+    if (CZ_NODES[k]){ st.shape=k; st.isep=[0,0]; return null; }
     if (PLACE[k]){ st.place={dir:k, dist:null, of:null}; return null; }
     if (isColorWord(k)){ st.color=parseColor(k); return null; }
   }

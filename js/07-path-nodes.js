@@ -34,7 +34,7 @@ function nodeOp(j, e, ps, ctx, kw, isHead, onEdge){
   const shiftV = ps.frame.mat ? ps.frame.lin(M[4], M[5]) : (ctx.frame && ctx.frame.mat ? mLin(ctx.frame.mat, M[4], M[5]) : [M[4], M[5]]);
   const frameRot = ps.frame.mat ? mAngle(ps.frame.mat) : 0;
   const nIdx = R.nodes.length;
-  R.nodes.push({stmt:ps.sIdx, text:textG, opts:optSpan, at:atR?{s:atR.s,e:atR.e}:null, kw, name:nst.name, kwEnd, head:!!isHead, atLit:!!(atR&&atR.h)});
+  R.nodes.push({stmt:ps.sIdx, text:textG, opts:optSpan, at:atR?{s:atR.s,e:atR.e}:null, kw, name:nst.name, kwEnd, head:!!isHead, atLit:!!(atR&&atR.h), cz:!!CZ_NODES[nst.shape]});
   const make = (p) => {
     p = V.add(p, shiftV);
     let n;
@@ -289,6 +289,14 @@ function pathSVG(ps, ctx, hit=true){
 }
 function finishPath(ps, ctx){
   let body='';
+  // capi a cui agganciare i collegamenti (palette dei circuiti)
+  if (!ps.clip) for (const sb of ps.subs) if (sb && !sb.hidden){ R.pins.push({p:sb.start, s:ps.sIdx}); for (const o of sb.ops) R.pins.push({p:o.p, s:ps.sIdx}); }
+  for (const n of ps.nodes) if (n.kind==='cz'){
+    const an = n.cz.anchors ? n.cz.anchors(n.czL) : {};
+    const ks = Object.keys(an).filter(k=>!/^(base|collector|emitter|gate|drain|source|up|down)$/.test(k));
+    if (n.name && ks.length) for (const k of ks) R.pins.push({p:toPage(n, an[k]), t:`(${n.name}.${k})`, s:ps.sIdx});
+    else R.pins.push({p:n.c, t:n.name?`(${n.name})`:null, s:ps.sIdx});
+  }
   const main = pathSVG(ps, ctx);
   if (ps.clip){
     const id='clip'+(R.clipN++);

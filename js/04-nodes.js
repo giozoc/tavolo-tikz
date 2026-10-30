@@ -9,6 +9,7 @@ function nodeGeom(n){
   const sh = st.shape;
   n.poly=null; n.rx=n.ry=0; n.kind='poly';
   if (sh==='coordinate'){ n.kind='pt'; n.hw=n.hh=0; return; }
+  if (CZ_NODES[sh]){ czGeom(n); return; }
   if (sh==='circle' || sh==='circle split' || sh==='forbidden sign' || sh==='circle cross'){
     const R=Math.max(Math.hypot(iw,ih), st.minW/2, st.minH/2); n.kind='ell'; n.rx=n.ry=R; n.hw=n.hh=R; return; }
   if (sh==='ellipse' || sh==='cloud' || sh==='ellipse callout'){
@@ -71,6 +72,7 @@ const COMPASS = {east:0,'north east':45,north:90,'north west':135,west:180,'sout
 function anchorLocal(n, name){
   name = (name||'center').trim();
   if (name==='center' || n.kind==='pt') return [0,0];
+  if (n.kind==='cz'){ const a=czAnchor(n, name); if (a) return a; }
   const base = -n.th/2 + n.td;
   if (name==='base') return [0, base];
   if (name==='mid') return [0, base+.5*EX*(n.st.font||1)];
@@ -204,7 +206,8 @@ function nodeSVG(n, extra=''){
   const pt = paint(st);
   const rot = n.rot ? ` transform="rotate(${fmt(-n.rot)} ${P(n.c).replace(' ',' ')})"` : '';
   const loc = p => V.add(n.c, p);
-  if (n.kind!=='pt' && (pt.fill!=='none' || pt.stroke!=='none')){
+  if (n.kind==='cz') out += czNodeSVG(n);
+  else if (n.kind!=='pt' && (pt.fill!=='none' || pt.stroke!=='none')){
     let d, el;
     if (n.kind==='ell'){ const c=n.c; d=`M${fmt(c[0]+n.rx,4)} ${fmt(-c[1],4)}A${fmt(n.rx,4)} ${fmt(n.ry,4)} 0 1 0 ${fmt(c[0]-n.rx,4)} ${fmt(-c[1],4)}A${fmt(n.rx,4)} ${fmt(n.ry,4)} 0 1 0 ${fmt(c[0]+n.rx,4)} ${fmt(-c[1],4)}Z`; }
     else if (n.kind==='rrect'){ const r=n.hh; d=`M${P(loc([-n.hw+r,-n.hh]))}H${fmt(n.c[0]+n.hw-r,4)}A${r} ${r} 0 0 0 ${P(loc([n.hw-r,n.hh]))}H${fmt(n.c[0]-n.hw+r,4)}A${r} ${r} 0 0 0 ${P(loc([-n.hw+r,-n.hh]))}Z`; }
@@ -236,7 +239,7 @@ function tipInfo(spec, st, isStart){
   let opts = ''; let m;
   s = s.replace(/^\{|\}$/g,'');
   if ((m=/\[(.*)\]$/.exec(s))){ opts=m[1]; s=s.slice(0,m.index).trim(); }
-  let rev=false, n=1;
+  let rev=false, n=1, sw=false;
   if (/^[<>]+$/.test(s)){ const want=isStart?'<':'>'; rev = s[0]!==want; n=s.length; s=st.arrowDef.replace(/[{}]/g,'').replace(/\[.*\]$/,'').trim()||'to'; }
   const lwp = st.lw/PT;
   let L = (3.2 + 2.2*lwp)*PT, W = L*.8;
@@ -255,12 +258,13 @@ function tipInfo(spec, st, isStart){
         else if (ok==='scale length') L*=+v; else if (ok==='scale width') W*=+v;
         else if (ok==='open') kind = kind==='dot'?'circ':kind+'-open';
         else if (ok==='reversed') rev=!rev;
+        else if (ok==='swap') sw=!sw;
         else if (ok==='sep') {}
       }catch(e){}
     }
   }
   const back = (kind==='to'||kind==='bar') ? st.lw*.5 : (kind==='circ'||kind==='dot') ? L : L*.85;
-  return {kind, L, W, rev, n, back: back*n};
+  return {kind, L, W, rev, n, sw, back: back*n};
 }
 function tipSVG(t, p, ang, st){
   // p = punta (pagina), ang = direzione uscente (gradi)
@@ -286,7 +290,7 @@ function tipSVG(t, p, ang, st){
       case 'dot': { const c=T(-L/2,0); out+=`<circle cx="${fmt(c[0],4)}" cy="${fmt(-c[1],4)}" r="${fmt(L/2,4)}" fill="${col}"${op}/>`; break; }
       case 'sq': out+=`<path d="M${P(T(0,L/2))}L${P(T(0,-L/2))}L${P(T(-L,-L/2))}L${P(T(-L,L/2))}Z" ${fillA}${op}/>`; break;
       case 'dia': out+=`<path d="M${P(T(0,0))}L${P(T(-L/2,W/2))}L${P(T(-L,0))}L${P(T(-L/2,-W/2))}Z" ${fillA}${op}/>`; break;
-      case 'hook': out+=`<path d="M${P(T(0,0))}A${fmt(W/3,4)} ${fmt(W/3,4)} 0 0 1 ${P(T(0,W*.66))}" fill="none" stroke="${col}" stroke-width="${lw}"${op}/>`; break;
+      case 'hook': out+=`<path d="M${P(T(0,0))}A${fmt(W/3,4)} ${fmt(W/3,4)} 0 0 ${t.sw?0:1} ${P(T(0,t.sw?-W*.66:W*.66))}" fill="none" stroke="${col}" stroke-width="${lw}"${op}/>`; break;
     }
   }
   return out;

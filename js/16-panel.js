@@ -11,7 +11,8 @@ function updateProps(){
   const box=$('props'); const si=curStmt();
   if (si<0 || !lastR){ box.hidden=true; return; }
   const st=lastR.stmts[si]; const items=optItems(st);
-  const cmd=st.cmd; let h=`<h3><button class="pmin" id="p-min" title="Riduci o espandi il pannello" aria-label="Riduci pannello">${propsMin?'+':'−'}</button><span>Proprietà</span><code>\\${cmd==='axis'?'begin{axis}':cmd} · r ${lineOfSrc(st.start)}</code></h3>`;
+  const cmd=st.cmd; const what = st.cd && st.cd.cell ? `cella ${st.cd.r}-${st.cd.c}` : '\\'+(cmd==='axis'?'begin{axis}':cmd);
+  let h=`<h3><button class="pmin" id="p-min" title="Riduci o espandi il pannello" aria-label="Riduci pannello">${propsMin?'+':'−'}</button><span>Proprietà</span><code>${what} · r ${lineOfSrc(st.start)}</code></h3>`;
   const inl = (selNode!==null && selNode!==undefined && lastR.nodes[selNode] && lastR.nodes[selNode].stmt===si && !lastR.nodes[selNode].head && lastR.nodes[selNode].text) ? selNode : null;
   if (inl!==null) h += nodeSectionHTML(inl) + `<div class="sub">Percorso</div>`;
   h += `<div class="pr">`;
@@ -40,8 +41,11 @@ function updateProps(){
     h += `<label for="ap-smooth">smussata</label><input type="checkbox" id="ap-smooth"${items.includes('smooth')?' checked':''}>`;
   } else if (st.uml){
     h += umlPropsHTML(si, st, items, sel);
+  } else if (st.cd){
+    h += cdPropsHTML(si, st, items, sel);
   } else {
     const isNode = cmd==='node' || cmd==='coordinate' || cmd==='matrix';
+    if (st.cz) h += czPropsHTML(si, st, sel);
     if (isNode && st.text){
       h += `<label class="full" for="nd-text">testo (LaTeX)</label><textarea id="nd-text">${esc(src.slice(st.text.s, st.text.e))}</textarea>`;
       const shp = (items.find(i=>['circle','rectangle','ellipse','diamond','star','regular polygon','rounded rectangle','trapezium'].includes(i))||'');
@@ -126,6 +130,8 @@ function wireProps(si, st, items){
     apply(src.slice(0,s0)+v+src.slice(e0));
   }));
   box.querySelectorAll('[data-hk]').forEach(l=>l.addEventListener('click', ()=>{ selHandle=+l.dataset.hk; drawOverlay(); updateProps(); }));
+  if (st.cd) cdWireProps(si, st, items);
+  if (st.cz) czWireProps(si, st);
   $('p-del').onclick=deleteSel; $('p-dup').onclick=duplicateSel;
   $('p-code').onclick=()=>{ ed.focus(); ed.setSelectionRange(st.start, st.end); revealStmt(); };
 }
@@ -157,10 +163,13 @@ function libsFor(code){
 }
 function standalone(){
   const code=figureCode(); const libs=libsFor(code);
-  const pre = figs.length ? src.slice(0, figs[0].s).split('\n').filter(l=>/^\s*\\(definecolor|colorlet|tikzset|tikzumlset|pgfplotsset|usetikzlibrary|newcommand|def|tikzstyle)/.test(l)).join('\n') : '';
-  const pgf = /\\begin\{(axis|semilogxaxis|semilogyaxis|loglogaxis)\}|\\addplot/.test(code);
+  const pre = figs.length ? src.slice(0, figs[0].s).split('\n').filter(l=>/^\s*\\(definecolor|colorlet|tikzset|tikzumlset|tikzcdset|ctikzset|pgfplotsset|pgfplotstableread|usetikzlibrary|newcommand|def|tikzstyle)/.test(l)).join('\n') : '';
+  const pgf = /\\begin\{(axis|semilogxaxis|semilogyaxis|loglogaxis)\}|\\addplot|\\pgfplotstableread/.test(code+pre);
   const uml = /\\uml[a-zA-Z]|\\begin\{uml|\\tikzumlset/.test(code+pre);
-  return `\\documentclass[tikz,border=4pt]{standalone}\n`+(uml?`\\usepackage{tikz-uml}\n`:'')+(pgf?`\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n`+(/fill between/.test(code)?`\\usepgfplotslibrary{fillbetween}\n`:''):'')+(libs.length?`\\usetikzlibrary{${libs.join(',')}}\n`:'')+(pre?pre+'\n':'')+`\\begin{document}\n${code}\n\\end{document}\n`;
+  const cd = /\\begin\{tikzcd\}|\\tikzcdset/.test(code+pre);
+  const circ = /\\begin\{circuitikz\}|\\ctikzset/.test(code+pre) || lastR.stmts.some(st=>st.cz) || new RegExp('\\[[^\\]]*\\b('+Object.keys(CZ_NODES).join('|')+')\\b').test(code);
+  const czOpt = (/\\usepackage\s*(\[[^\]]*\])\s*\{circuitikz\}/.exec(src)||[])[1]||'';
+  return `\\documentclass[tikz,border=4pt]{standalone}\n`+(uml?`\\usepackage{tikz-uml}\n`:'')+(cd?(/\\(lrcorner|ulcorner|urcorner|llcorner)/.test(code)?`\\usepackage{amssymb}\n`:'')+`\\usepackage{tikz-cd}\n`:'')+(circ?`\\usepackage${czOpt}{circuitikz}\n`:'')+(pgf?`\\usepackage{pgfplots`+(/\\pgfplotstableread/.test(code+pre)?',pgfplotstable':'')+`}\n\\pgfplotsset{compat=1.18}\n`+(/fill between/.test(code)?`\\usepgfplotslibrary{fillbetween}\n`:''):'')+(libs.length?`\\usetikzlibrary{${libs.join(',')}}\n`:'')+(pre?pre+'\n':'')+`\\begin{document}\n${code}\n\\end{document}\n`;
 }
 function exportSVG(){
   const clone = drawG.cloneNode(true);
@@ -181,25 +190,70 @@ function pngFrom(svg, scale=4){
 }
 $('b-export').onclick=async()=>{
   const svg=exportSVG(); const sa=standalone();
-  modal('Esporta', `<p>Il codice si copia negli appunti. L'immagine PNG si salva con clic destro (o tenendo premuto) → «Salva immagine».</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="x-tikz">Copia codice TikZ</button><button class="btn" id="x-doc">Copia documento LaTeX completo</button><button class="btn" id="x-svg">Copia SVG</button></div>
+  const files=[...lastR.dataUsed];
+  modal('Esporta', `<p>Il codice si copia negli appunti. L'immagine PNG si salva con clic destro (o tenendo premuto) → «Salva immagine».</p>`+
+  (files.length?`<p>La figura legge ${files.map(f=>`<code>${esc(f)}</code>`).join(', ')}: per compilarla tieni ${files.length>1?'i file':'il file'} nella stessa cartella del .tex.</p>`:'')+`
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="x-tikz">Copia codice TikZ</button><button class="btn" id="x-doc">Copia documento LaTeX completo</button><button class="btn" id="x-svg">Scarica SVG</button></div>
   <img id="x-png" alt="Anteprima PNG della figura" style="min-height:40px">
   <pre id="x-pre">${esc(sa)}</pre>`);
   $('x-tikz').onclick=()=>copyText(figureCode(),'Codice TikZ copiato');
   $('x-doc').onclick=()=>copyText(sa,'Documento copiato');
-  $('x-svg').onclick=()=>copyText(svg,'SVG copiato');
+  $('x-svg').onclick=()=>{
+    const name = (docName||'figura')+(figs.length>1 ? '-'+(Math.min(figIdx,figs.length-1)+1) : '')+'.svg';
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([svg], {type:'image/svg+xml'})); a.download=name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    toast('Scaricato '+name);
+  };
   try{ $('x-png').src = await pngFrom(svg); }catch(e){ $('x-png').alt='Anteprima PNG non disponibile in questo browser'; }
 };
 
 /* ---------- apertura file ---------- */
 $('b-open').onclick=()=>$('file').click();
-$('file').addEventListener('change', e=>{ const f=e.target.files[0]; if (f) loadFile(f); e.target.value=''; });
-function loadFile(f){ const r=new FileReader(); r.onload=()=>{ figIdx=0; selStart=null; setSource(String(r.result)); requestAnimationFrame(fitView); toast('Aperto '+f.name+(figs.length>1?` · ${figs.length} figure`:'')); }; r.readAsText(f); }
+$('file').addEventListener('change', e=>{ loadFiles([...e.target.files]); e.target.value=''; });
+/* un .tex diventa il sorgente; .csv, .dat, .tsv (e .txt senza comandi LaTeX) diventano file di dati */
+let docName = '';   // nome del .tex aperto, per i file scaricati
+async function loadFiles(list){
+  const read = f => new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(String(r.result)); r.onerror=()=>res(null); r.readAsText(f); });
+  let tex=null; const data={};
+  for (const f of list){
+    const t=await read(f); if (t===null) continue;
+    if (DATA_EXT.test(f.name) && !(/\.txt$/i.test(f.name) && /\\(begin|draw|addplot|node)\b/.test(t))) data[f.name]=t;
+    else if (!tex) tex={name:f.name, t};
+  }
+  const nd=Object.keys(data).length;
+  if (nd) setData(data, !tex);
+  if (tex){ docName=tex.name.replace(/\.[^.]+$/,''); figIdx=0; selStart=null; setSource(tex.t); requestAnimationFrame(fitView); }
+  const missing=[...lastR.dataUsed].filter(n=>dataFile(n)===null);
+  toast((tex?'Aperto '+tex.name+(figs.length>1?` · ${figs.length} figure`:''):'')+(tex&&nd?' · ':'')+(nd?`dati: ${Object.keys(data).join(', ')}`:'')+(missing.length?` · manca ${missing.join(', ')}`:''));
+}
+function setData(obj, render=true){
+  Object.assign(DATA, obj);
+  try{ localStorage.setItem('tz-data', JSON.stringify(DATA)); }catch(e){ toast('File di dati troppo grandi per essere ricordati al prossimo avvio'); }
+  if (render && lastR) renderNow();
+}
+function dropData(name){ delete DATA[name]; store.set('tz-data', JSON.stringify(DATA)); renderNow(); }
+{ try{ const d=JSON.parse(store.get('tz-data')||'{}'); if (d && typeof d==='object') DATA=d; }catch(e){} }
+function dataModal(){
+  const used=lastR ? [...lastR.dataUsed] : [];
+  const rows=Object.keys(DATA).sort().map(k=>{
+    const lines=DATA[k].split(/\r?\n/).filter(l=>l.trim());
+    return `<tr><td><code>${esc(k)}</code>${used.includes(k)?' <span class="tag">in uso</span>':''}</td><td>${lines.length} righe</td><td><button class="btn" data-dv="${esc(k)}">Anteprima</button> <button class="btn dng" data-dd="${esc(k)}">Rimuovi</button></td></tr>`;
+  }).join('');
+  const missing=used.filter(n=>dataFile(n)===null);
+  modal('Dati', `<p>I grafici possono leggere i dati da file: <code>\\addplot table[col sep=comma] {dati.csv};</code>, <code>\\pgfplotstableread</code> e <code>plot file {…}</code>. Carica qui i file che nel progetto stanno accanto al .tex (o trascinali insieme al .tex). Restano nel browser fino a quando li rimuovi.</p>`+
+    (missing.length?`<p class="warn">Il codice usa file non ancora caricati: ${missing.map(m=>`<code>${esc(m)}</code>`).join(', ')}</p>`:'')+
+    (rows?`<table class="dt">${rows}</table>`:'<p><i>Nessun file di dati caricato.</i></p>')+
+    `<div style="display:flex;gap:8px;margin-top:10px"><button class="btn pri" id="d-add">Aggiungi file…</button></div><pre id="d-pre" hidden></pre>`);
+  $('d-add').onclick=()=>$('file').click();
+  $('m-b').querySelectorAll('[data-dv]').forEach(b=>b.onclick=()=>{ const p=$('d-pre'); p.hidden=false; p.textContent=DATA[b.dataset.dv].split(/\r?\n/).slice(0,20).join('\n'); });
+  $('m-b').querySelectorAll('[data-dd]').forEach(b=>b.onclick=()=>{ dropData(b.dataset.dd); dataModal(); });
+}
+$('b-data').onclick=dataModal;
 let dragDepth=0;
 window.addEventListener('dragenter', e=>{ if ([...(e.dataTransfer?.types||[])].includes('Files')){ dragDepth++; $('drop').hidden=false; } });
 window.addEventListener('dragleave', ()=>{ if(--dragDepth<=0){ dragDepth=0; $('drop').hidden=true; } });
 window.addEventListener('dragover', e=>e.preventDefault());
-window.addEventListener('drop', e=>{ e.preventDefault(); dragDepth=0; $('drop').hidden=true; const f=e.dataTransfer.files[0]; if (f) loadFile(f); });
+window.addEventListener('drop', e=>{ e.preventDefault(); dragDepth=0; $('drop').hidden=true; if (e.dataTransfer.files.length) loadFiles([...e.dataTransfer.files]); });
 ed.addEventListener('paste', ()=>setTimeout(()=>{ if (findFigures(src).length!==figs.length) { figIdx=0; renderNow(); fitView(); } },0));
 
 /* ---------- esempi ---------- */
@@ -384,12 +438,32 @@ const EXAMPLES = {
     \draw[blue!\i0!red, thick] plot[smooth, domain=0:6.28, samples=50] (\x, {sin(deg(\x) + \i*30)*0.4 + \i*0.5});
   }
   \draw[->] (0,-0.6) -- (6.6,-0.6) node[right] {$t$};
+\end{tikzpicture}`,
+'Diagramma commutativo (tikz-cd)': String.raw`\begin{tikzcd}[column sep=large, row sep=large]
+  A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed, "h" description] & B \arrow[d, "k"] \\
+  C \arrow[r, hook, "i"'] & D \arrow[r, two heads, "p"] & E \arrow[l, bend right, "s"']
+\end{tikzcd}`,
+'Circuito RLC (circuitikz)': String.raw`\begin{circuitikz}
+  \draw (0,0) to[V, v=$V_s$] (0,3)
+        to[R=$R_1$, i=$i$] (3,3)
+        to[L=$L$] (6,3)
+        to[C=$C$] (6,0) -- (0,0);
+  \draw (3,3) to[R=$R_2$, *-*] (3,0);
+  \draw (3,0) node[ground]{};
+\end{circuitikz}`,
+'Dati da CSV (pgfplots)': String.raw`\begin{tikzpicture}
+  \begin{axis}[xlabel={ore}, ylabel={$^\circ$C}, grid=major, legend pos=south east, width=9cm, height=6cm]
+    \addplot[blue, thick, mark=*] table[x=tempo, y=temperatura, col sep=comma] {misure.csv};
+    \addlegendentry{temperatura}
+  \end{axis}
 \end{tikzpicture}`
 };
+/* file di dati che accompagnano gli esempi */
+const EXAMPLE_DATA = {'Dati da CSV (pgfplots)': {'misure.csv': `tempo,temperatura,umidita\n0,18.2,61\n1,18.9,60\n2,19.8,57\n3,21.4,52\n4,22.9,48\n5,23.6,46\n6,23.1,47\n7,22.0,50\n8,20.7,54\n`}};
 $('b-ex').onclick=()=>{
   modal('Esempi', `<p>Carica un esempio: sostituisce il codice attuale (puoi annullare con Ctrl+Z).</p><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">`+
     Object.keys(EXAMPLES).map(k=>`<button class="btn" data-ex="${esc(k)}" style="text-align:left;padding:10px">${esc(k)}</button>`).join('')+'</div>');
-  $('m-b').querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{ $('modal').hidden=true; figIdx=0; selStart=null; setSource(EXAMPLES[b.dataset.ex]); requestAnimationFrame(fitView); });
+  $('m-b').querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{ $('modal').hidden=true; figIdx=0; selStart=null; if (EXAMPLE_DATA[b.dataset.ex]) setData(EXAMPLE_DATA[b.dataset.ex], false); setSource(EXAMPLES[b.dataset.ex]); requestAnimationFrame(fitView); });
 };
 
 /* ---------- barra ---------- */

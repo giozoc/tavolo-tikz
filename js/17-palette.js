@@ -114,8 +114,13 @@ function umlPalBuild(){
     g.items.map(it=>`<button data-u="${umlItems.indexOf(it)}" title="\\${esc(umlCmdOf(it))}"><svg viewBox="0 0 24 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">${UI[it.i]||''}</svg><span>${esc(it.l)}</span></button>`).join('')+
     `</div></details>`).join('') + `<p class="palhint">Elementi: clic sul disegno. Relazioni e chiamate: clic sui due elementi da collegare. <b>Esc</b> annulla.</p>`;
 }
+/* i pannelli degli elementi (UML, automi, tikz-cd, circuiti) si escludono a vicenda */
+const PALS = [];
+function palExclusive(id){ for (const p of PALS) if (p.id!==id && !$(p.id).hidden) p.open(false); }
+const palsClosed = () => PALS.every(p=>$(p.id).hidden);
+PALS.push({id:'umlpal', open:on=>umlPalOpen(on)});
 function umlPalOpen(on){
-  if (on && typeof autPalOpen==='function' && !$('autpal').hidden) autPalOpen(false);
+  if (on) palExclusive('umlpal');
   $('umlpal').hidden=!on; $('b-uml').classList.toggle('on', on); store.set('tz-uml', on?'1':'');
   if (!on && tool==='uml') setTool('select');
   requestAnimationFrame(()=>applyView());

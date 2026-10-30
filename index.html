@@ -29,6 +29,8 @@
     <button class="tb" data-tool="axis" title="Grafico pgfplots (G)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 2v11.5H14"/><path d="M4 12c3-1 4-8 9-9" stroke-dasharray="0"/></svg><span class="lbl">Axis</span></button>
     <button class="tb" id="b-uml" title="Elementi UML (tikz-uml) — U"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="6" height="5"/><rect x="8.5" y="9.5" width="6" height="5"/><path d="M1.5 4h6M4.5 6.5V12h4"/></svg><span class="lbl">UML</span></button>
     <button class="tb" id="b-aut" title="Automi (libreria automata) — M"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="10" r="2.8"/><circle cx="12.5" cy="10" r="2.8"/><circle cx="12.5" cy="10" r="1.7"/><path d="M6.8 10h2.5M8.4 8.8l1.1 1.2-1.1 1.2M2.6 7.6C2 3.5 6 3.5 5.4 7.6"/></svg><span class="lbl">Automi</span></button>
+    <button class="tb" id="b-cd" title="Diagrammi commutativi (tikz-cd) — D"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 3.5h8M10 2l1.5 1.5L10 5M3 4.5v7M1.5 10L3 11.5 4.5 10M4 12.5l7.5-8"/><circle cx="2.5" cy="3" r="1" fill="currentColor"/><circle cx="13.5" cy="3" r="1" fill="currentColor"/><circle cx="2.5" cy="13.5" r="1" fill="currentColor"/></svg><span class="lbl">tikz-cd</span></button>
+    <button class="tb" id="b-cz" title="Circuiti (circuitikz) — K"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M1 8h2.5l1-2.5 2 5 2-5 2 5 1-2.5H15"/></svg><span class="lbl">Circuiti</span></button>
   </div>
   <div class="grp">
     <button class="tb" id="b-undo" title="Annulla (Ctrl+Z)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3L2 6l3 3M2 6h8a4 4 0 010 8H6"/></svg></button>
@@ -42,11 +44,12 @@
   <select class="tb" id="figsel" title="Figura" aria-label="Figura" hidden></select>
   <div class="grp">
     <button class="tb" id="b-open" title="Apri file .tex o .tikz"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h4l1.5 1.5H14V13H2z"/></svg><span class="lbl">Apri</span></button>
+    <button class="tb" id="b-data" title="File di dati (CSV) accanto al .tex"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M2 6h12M2 9.5h12M6.5 2.5v11"/></svg><span class="lbl">Dati</span></button>
     <button class="tb" id="b-ex" title="Esempi"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h10v12H3zM6 5h4M6 8h4M6 11h2"/></svg><span class="lbl">Esempi</span></button>
     <button class="tb" id="b-export" title="Esporta SVG, PNG, LaTeX"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 12v2h10v-2"/></svg><span class="lbl">Esporta</span></button>
     <button class="tb" id="b-theme" title="Tema chiaro/scuro"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11A5.5 5.5 0 018 2.5z" fill="currentColor"/></svg></button>
   </div>
-  <input type="file" id="file" accept=".tex,.tikz,.txt,.pgf" hidden>
+  <input type="file" id="file" accept=".tex,.tikz,.txt,.pgf,.csv,.dat,.tsv" multiple hidden>
 </header>
 <div id="main">
   <aside id="umlpal" class="palpane" hidden aria-label="Elementi UML">
@@ -56,6 +59,14 @@
   <aside id="autpal" class="palpane" hidden aria-label="Automi">
     <div class="pane-h"><span>Automi</span><span class="sp"></span><button class="pmin" id="autpal-x" title="Chiudi il pannello" aria-label="Chiudi il pannello degli automi">×</button></div>
     <div id="autpal-b" class="palpane-b"></div>
+  </aside>
+  <aside id="cdpal" class="palpane" hidden aria-label="Diagrammi commutativi">
+    <div class="pane-h"><span>tikz-cd</span><span class="sp"></span><button class="pmin" id="cdpal-x" title="Chiudi il pannello" aria-label="Chiudi il pannello tikz-cd">×</button></div>
+    <div id="cdpal-b" class="palpane-b"></div>
+  </aside>
+  <aside id="czpal" class="palpane" hidden aria-label="Circuiti">
+    <div class="pane-h"><span>Circuiti</span><span class="sp"></span><button class="pmin" id="czpal-x" title="Chiudi il pannello" aria-label="Chiudi il pannello dei circuiti">×</button></div>
+    <div id="czpal-b" class="palpane-b"></div>
   </aside>
   <section id="left" aria-label="Sorgente TikZ">
     <div class="pane-h"><span>Sorgente</span><span class="sp"></span><span id="pos">r 1, c 1</span></div>
@@ -90,7 +101,7 @@
 </div>
 <div id="modal" hidden><div class="box"><h2><span id="m-t"></span><button class="btn" id="m-x">Chiudi</button></h2><div class="bd" id="m-b"></div></div></div>
 <div id="toast"></div>
-<div id="drop" hidden>Rilascia il file .tex per aprirlo</div>
+<div id="drop" hidden>Rilascia il file .tex (e i suoi file di dati) per aprirlo</div>
 <script src="js/01-core.js"></script>
 <script src="js/02-style.js"></script>
 <script src="js/03-text.js"></script>
@@ -102,10 +113,14 @@
 <script src="js/09-render.js"></script>
 <script src="js/10-uml.js"></script>
 <script src="js/11-automata.js"></script>
-<script src="js/12-ui.js"></script>
-<script src="js/13-tools.js"></script>
-<script src="js/14-panel.js"></script>
-<script src="js/15-palette.js"></script>
-<script src="js/16-automata-palette.js"></script>
+<script src="js/12-tikzcd.js"></script>
+<script src="js/13-circuitikz.js"></script>
+<script src="js/14-ui.js"></script>
+<script src="js/15-tools.js"></script>
+<script src="js/16-panel.js"></script>
+<script src="js/17-palette.js"></script>
+<script src="js/18-automata-palette.js"></script>
+<script src="js/19-cd-palette.js"></script>
+<script src="js/20-circuit-palette.js"></script>
 </body>
 </html>

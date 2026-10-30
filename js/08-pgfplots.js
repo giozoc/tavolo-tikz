@@ -351,16 +351,19 @@ function addplot(cmdStart, name, i, e, ctx, ax, collect){
       } else k++;
     }
     j=g.e+1;
-  } else if (S.startsWith('table',j)){
-    j=skipWS(j+5,e); let topt={};
-    if (S[j]==='['){ const en=mcS(j); topt=axisOptMap(S.slice(j+1,en), ctx); j=skipWS(en+1,e); }
-    const g=readGroup(j); if(!g){ ctx.warn('table: dati attesi tra { }'); return; } j=g.e+1;
-    let txt=g.text;
-    if (!/\d/.test(txt) || /^\s*[\w\-./]+\.(dat|csv|txt|tsv)\s*$/.test(txt)){ ctx.warn('table da file non supportato: incolla i dati tra { }'); return; }
-    const rs = topt['row sep']==='\\\\' ? txt.split('\\\\') : txt.split(/\n|\\\\/);
-    const colsep = topt['col sep']==='comma' ? /\s*,\s*/ : topt['col sep']==='semicolon'? /\s*;\s*/ : /\s+/;
-    let rows = rs.map(r=>r.replace(/%.*$/,'').trim()).filter(Boolean).map(r=>r.split(colsep));
-    let head=null; if (rows.length && rows[0].some(c=>isNaN(parseFloat(c)) && symX(c)===null)){ head=rows.shift(); }
+  } else if (S.startsWith('table',j) || S.startsWith('file',j)){
+    // dati in linea, da \pgfplotstableread o da un file caricato accanto al .tex
+    const isFile = S.startsWith('file',j);
+    j=skipWS(j+(isFile?4:5),e); let toptText='';
+    if (S[j]==='['){ const en=mcS(j); toptText=S.slice(j+1,en); j=skipWS(en+1,e); }
+    let txt; const g=readGroup(j);
+    if (g){ txt=g.text; j=g.e+1; }
+    else { const m=/^\\[a-zA-Z@]+/.exec(S.slice(j,e)); if(!m){ ctx.warn('table: dati attesi tra { }'); return; } txt=m[0]; j+=m[0].length; }
+    const tb=tableText(txt, ctx); if (!tb) return;
+    const topt=axisOptMap((tb.opts?tb.opts+',':'')+toptText, ctx);
+    let rows = tableRows(tb.text, topt, ctx, tb.file);
+    let head=null; if (rows.length && topt.header!=='false' && rows[0].some(c=>isNaN(parseFloat(c)) && symX(c)===null)){ head=rows.shift(); }
+    if (!rows.length) ctx.warn((tb.file?'«'+tb.file+'»':'la tabella')+' non contiene righe di dati');
     const ci = (k,d)=>{ if (topt[k]===undefined) return d; if (head){ const n=head.indexOf(String(topt[k]).trim()); if(n>=0) return n; } const n=parseInt(topt[k+' index']??topt[k]); return isNaN(n)?d:n; };
     const xi = topt['x index']!==undefined ? +topt['x index'] : ci('x',0), yi = topt['y index']!==undefined ? +topt['y index'] : ci('y',1);
     const yexpr = topt['y expr'], xexpr = topt['x expr'];
@@ -389,7 +392,7 @@ function addplot(cmdStart, name, i, e, ctx, ax, collect){
     emit(ctx, `<g data-s="${sIdx}"${clip}>${pathSVG(ps,ctx).svg}</g>`);
     if (!forget) ax.plots.push({pts:[], st:fst, legendOnly:true, area:true});
     return;
-  } else if (S.startsWith('gnuplot',j) || S.startsWith('shell',j) || S.startsWith('file',j)){
+  } else if (S.startsWith('gnuplot',j) || S.startsWith('shell',j)){
     ctx.warn('\\addplot '+S.slice(j,j+7).trim()+' non supportato'); return;
   } else { ctx.warn('\\addplot: dati non riconosciuti'); return; }
   // filtri
